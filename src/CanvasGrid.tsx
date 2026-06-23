@@ -60,8 +60,8 @@ const drawCardinalitySymbol = (ctx: CanvasRenderingContext2D, px: number, py: nu
     // Sjekk om teksten havner UNDER en entitetsboks!
     const isInsideEntity = (x: number, y: number) => {
         return entities.some(e => {
-            const ew = e.fields ? Math.max(6, 4 + Math.max(...e.fields.map(f => f.name.length)) * 0.4) : 6;
-            const eh = 4 + (e.fields ? e.fields.length : 0);
+            const ew = e.fields ? Math.max(8, 6 + Math.max(...e.fields.map(f => f.name.length)) * 0.4) : 8;
+            const eh = 6 + (e.fields ? e.fields.length : 0);
             const eLeft = (e.x - ew / 2) * cellW;
             const eRight = (e.x + ew / 2) * cellW;
             const eTop = (e.y - eh / 2) * cellH;

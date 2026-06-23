@@ -271,8 +271,8 @@ export default function App() {
 
   const getAllBoxes = (ents: EREntity[]): ObstacleBox[] => {
       return ents.map(e => {
-          const ew = 6;
-          const eh = 4 + e.fields.length;
+          const ew = 8;
+          const eh = 6 + e.fields.length;
           let startX = Math.max(0, e.x - Math.floor(ew / 2));
           let endX = Math.min(gridDim.w - 1, e.x + Math.ceil(ew / 2));
           let startY = Math.max(0, e.y - Math.floor(eh / 2));
