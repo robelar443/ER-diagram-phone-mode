@@ -1,6 +1,5 @@
 {
   "hosting": {
-    "site": "erdiagram-909ae-64402",
     "public": "dist",
     "ignore": [
       "firebase.json",

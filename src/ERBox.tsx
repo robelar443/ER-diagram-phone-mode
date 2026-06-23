@@ -72,9 +72,10 @@ interface ERBoxProps {
     onUpdateEntity: (entity: EREntity) => void;
     onDeleteEntity: (id: number) => void;
     onToggleEntity: () => void;
+    isPresentationMode?: boolean;
 }
 
-export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, containerRef, entityOrders, onUpdateOrder, onUpdateEntity, onDeleteEntity, onToggleEntity }) => {
+export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, containerRef, entityOrders, onUpdateOrder, onUpdateEntity, onDeleteEntity, onToggleEntity, isPresentationMode }) => {
     const classes = useStyles();
     const [isEditingName, setIsEditingName] = useState(false);
     const [editingOrderRelId, setEditingOrderRelId] = useState<number | null>(null);
@@ -185,7 +186,7 @@ export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, container
     };
 
     const handleHeaderClick = (e: React.MouseEvent) => {
-        if (isEditingName) return;
+        if (isEditingName || isPresentationMode) return;
         if (!isFollowing) {
             e.stopPropagation();
             setIsFollowing(true);
@@ -224,13 +225,15 @@ export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, container
             className={classes.card} 
             onClick={handleCardClick}
             style={{ 
-                left: `${leftPx}px`, 
-                top: `${topPx}px`,
-                transform: 'translate(-50%, -50%)', // Center the box on the grid coordinate
+                left: isPresentationMode ? 'auto' : `${leftPx}px`, 
+                top: isPresentationMode ? 'auto' : `${topPx}px`,
+                position: isPresentationMode ? 'relative' : 'absolute',
+                transform: isPresentationMode ? 'none' : 'translate(-50%, -50%)', // Center the box on the grid coordinate
                 pointerEvents: isFollowing ? 'none' : 'auto', // Disable pointer events on the card while following so it doesn't block underlying clicks
                 opacity: isFollowing ? 0.8 : 1,
                 zIndex: isFollowing ? 100 : 10,
-                borderColor: borderCol
+                borderColor: borderCol,
+                margin: isPresentationMode ? '0' : undefined
             }}
         >
             <div 
@@ -238,7 +241,7 @@ export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, container
                 onClick={handleHeaderClick} 
                 style={{ 
                     pointerEvents: 'auto', 
-                    cursor: isFollowing ? 'grabbing' : 'move',
+                    cursor: isPresentationMode ? 'default' : (isFollowing ? 'grabbing' : 'move'),
                     background: headerBg 
                 }}
             >

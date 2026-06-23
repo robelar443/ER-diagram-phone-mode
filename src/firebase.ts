@@ -1,20 +1,15 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getFirestore } from "firebase/firestore";
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyCNgrKvpF-q7Ark8srZh3cGmmUfAwvEgYo",
-  authDomain: "erdiagram-909ae.firebaseapp.com",
-  projectId: "erdiagram-909ae",
-  storageBucket: "erdiagram-909ae.firebasestorage.app",
-  messagingSenderId: "995834024523",
-  appId: "1:995834024523:web:3067c0547207f48945f3ce",
-  measurementId: "G-LXEJ01PPX6"
+  apiKey: "AIzaSyBCkz4u9dor-NzTH7sUzxxu_982o29Qkkk",
+  authDomain: "erdiagramwithphonemode.firebaseapp.com",
+  projectId: "erdiagramwithphonemode",
+  storageBucket: "erdiagramwithphonemode.firebasestorage.app",
+  messagingSenderId: "582035261437",
+  appId: "1:582035261437:web:d8c06590d4478b35a7fb94",
+  measurementId: "G-5SS2KFR03J"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+export const app = initializeApp(firebaseConfig);
 export const analytics = getAnalytics(app);
-export const db = getFirestore(app);

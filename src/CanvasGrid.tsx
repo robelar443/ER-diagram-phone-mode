@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { W, H } from './router';
+
 import type { EREntity, ERRelationship } from './types';
 
 export const SNAKE_COLORS = [
@@ -16,22 +16,24 @@ interface CanvasGridProps {
     relationships: ERRelationship[];
     activeRelationshipId: number | null;
     isSolving: boolean;
+    gridW: number;
+    gridH: number;
     onGridClick: (x: number, y: number) => void;
     onEdgeClick?: (relId: number, segmentIdx: number, gridX: number, gridY: number) => void;
 }
 
-const getEdgePoint = (path: number[], isStart: boolean, cellW: number, cellH: number) => {
+const getEdgePoint = (path: number[], isStart: boolean, cellW: number, cellH: number, gridW: number) => {
     const startIdx = isStart ? 0 : path.length - 1;
     const nextIdx = isStart ? 1 : path.length - 2;
     
     const startU = path[startIdx];
     const nextU = path[nextIdx];
     
-    const px = (startU % W) * cellW + cellW / 2;
-    const py = Math.floor(startU / W) * cellH + cellH / 2;
+    const px = (startU % gridW) * cellW + cellW / 2;
+    const py = Math.floor(startU / gridW) * cellH + cellH / 2;
     
-    const nx = (nextU % W) * cellW + cellW / 2;
-    const ny = Math.floor(nextU / W) * cellH + cellH / 2;
+    const nx = (nextU % gridW) * cellW + cellW / 2;
+    const ny = Math.floor(nextU / gridW) * cellH + cellH / 2;
     
     let dx = 0, dy = 0;
     if (nx > px) dx = 1;
@@ -96,7 +98,7 @@ const drawCardinalitySymbol = (ctx: CanvasRenderingContext2D, px: number, py: nu
     ctx.fillText(normType, cx, cy);
 };
 
-const drawCardinality = (ctx: CanvasRenderingContext2D, path: number[], isStart: boolean, type: string | undefined, color: string, cellW: number, cellH: number, usedPositions: {x: number, y: number}[], entities: EREntity[]) => {
+const drawCardinality = (ctx: CanvasRenderingContext2D, path: number[], isStart: boolean, type: string | undefined, color: string, cellW: number, cellH: number, usedPositions: {x: number, y: number}[], entities: EREntity[], gridW: number) => {
     if (!type || type === 'none' || path.length < 2) return;
     
     // Velg et punkt litt lenger ut på stien for å unngå at alle samler seg akkurat i T-krysset
@@ -111,11 +113,11 @@ const drawCardinality = (ctx: CanvasRenderingContext2D, path: number[], isStart:
     const startU = path[targetIdx];
     const nextU = path[nextIdx];
     
-    const px = (startU % W) * cellW + cellW / 2;
-    const py = Math.floor(startU / W) * cellH + cellH / 2;
+    const px = (startU % gridW) * cellW + cellW / 2;
+    const py = Math.floor(startU / gridW) * cellH + cellH / 2;
     
-    const nx = (nextU % W) * cellW + cellW / 2;
-    const ny = Math.floor(nextU / W) * cellH + cellH / 2;
+    const nx = (nextU % gridW) * cellW + cellW / 2;
+    const ny = Math.floor(nextU / gridW) * cellH + cellH / 2;
     
     let dx = 0, dy = 0;
     if (nx > px) dx = 1;
@@ -131,14 +133,16 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({
     relationships,
     activeRelationshipId,
     isSolving,
+    gridW,
+    gridH,
     onGridClick,
     onEdgeClick
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     const drawCanvas = (ctx: CanvasRenderingContext2D, width: number, height: number, time: number) => {
-        const cellW = width / W;
-        const cellH = height / H;
+        const cellW = width / gridW;
+        const cellH = height / gridH;
         const usedCardPositions: {x: number, y: number}[] = [];
 
         ctx.clearRect(0, 0, width, height);
@@ -170,8 +174,8 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({
 
                 rel.paths.forEach((path, idx) => {
                     if (path.length <= 1) return;
-                    const startEdge = getEdgePoint(path, true, cellW, cellH);
-                    const endEdge = getEdgePoint(path, false, cellW, cellH);
+                    const startEdge = getEdgePoint(path, true, cellW, cellH, gridW);
+                    const endEdge = getEdgePoint(path, false, cellW, cellH, gridW);
 
                     if (idx === 0) {
                         ctx.moveTo(startEdge.px, startEdge.py);
@@ -182,8 +186,8 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({
                     // If it's a straight line where startEdge/endEdge crossed the same segment, skip inner loop
                     for (let i = startEdge.idx; i <= endEdge.idx; i++) {
                         let u = path[i];
-                        let cx = (u % W) * cellW + cellW / 2;
-                        let cy = Math.floor(u / W) * cellH + cellH / 2;
+                        let cx = (u % gridW) * cellW + cellW / 2;
+                        let cy = Math.floor(u / gridW) * cellH + cellH / 2;
                         ctx.lineTo(cx, cy);
                     }
                     ctx.lineTo(endEdge.px, endEdge.py);
@@ -200,8 +204,8 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({
                 // Tegn koblingspunkter (sockets)
                 rel.paths.forEach((path, idx) => {
                     if (path.length <= 1) return;
-                    const startEdge = getEdgePoint(path, true, cellW, cellH);
-                    const endEdge = getEdgePoint(path, false, cellW, cellH);
+                    const startEdge = getEdgePoint(path, true, cellW, cellH, gridW);
+                    const endEdge = getEdgePoint(path, false, cellW, cellH, gridW);
                     
                     const drawSocket = (px: number, py: number) => {
                         ctx.beginPath();
@@ -221,14 +225,11 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({
                     drawSocket(endEdge.px, endEdge.py);
 
                     // Tegn kardinaliteter hvis satt
-                    const card = rel.cardinalities && rel.cardinalities[idx] ? rel.cardinalities[idx] : 'none';
-                    if (path.length > 1 && card !== 'none') {
-                        const parts = card.split('|');
-                        if (parts.length === 2) {
-                            drawCardinality(ctx, path, true, parts[0], colors.main, cellW, cellH, usedCardPositions, entities);
-                            drawCardinality(ctx, path, false, parts[1], colors.main, cellW, cellH, usedCardPositions, entities);
-                        }
-                    }
+                    let lcType = rel.cardinalities && rel.cardinalities[idx] ? rel.cardinalities[idx].split('|')[0] : '1';
+                    drawCardinality(ctx, path, true, lcType, colors.main, cellW, cellH, usedCardPositions, entities, gridW);
+                    
+                    let rcType = rel.cardinalities && rel.cardinalities[idx] ? rel.cardinalities[idx].split('|')[1] : '1';
+                    drawCardinality(ctx, path, false, rcType, colors.main, cellW, cellH, usedCardPositions, entities, gridW);
                 });
             }
         });
@@ -243,7 +244,7 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({
         let animationFrameId: number;
 
         const render = (time: number) => {
-            if (canvas.width !== W * 40 || canvas.height !== H * 40) {
+            if (canvas.width !== gridW * 40 || canvas.height !== gridH * 40) {
                 animationFrameId = requestAnimationFrame(render);
                 return;
             }
@@ -263,12 +264,12 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({
         
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
-        const x = Math.floor(((e.clientX - rect.left) * scaleX) / (canvas.width / W));
-        const y = Math.floor(((e.clientY - rect.top) * scaleY) / (canvas.height / H));
+        const x = Math.floor(((e.clientX - rect.left) * scaleX) / (canvas.width / gridW));
+        const y = Math.floor(((e.clientY - rect.top) * scaleY) / (canvas.height / gridH));
 
-        if (x >= 0 && x < W && y >= 0 && y < H) {
+        if (x >= 0 && x < gridW && y >= 0 && y < gridH) {
             if (onEdgeClick) {
-                const clickedNode = y * W + x;
+                const clickedNode = y * gridW + x;
                 let hitRelId = null;
                 let hitSegmentIdx = null;
 
@@ -296,8 +297,8 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({
     return (
         <canvas
             ref={canvasRef}
-            width={W * 40}
-            height={H * 40}
+            width={gridW * 40}
+            height={gridH * 40}
             onClick={handleCanvasClick}
             style={{
                 display: 'block',

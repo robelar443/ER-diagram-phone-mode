@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, Fragment } from 'react';
 import {
   makeStyles,
   tokens,
@@ -99,8 +99,101 @@ export default function App() {
   const [activeRelId, setActiveRelId] = useState<number | null>(1);
   const [isSolving, setIsSolving] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [gridDim, setGridDim] = useState({ w: 80, h: 60 });
   const [edgePopup, setEdgePopup] = useState<{ relId: number, segmentIdx: number, x: number, y: number } | null>(null);
   const recalcTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [viewMode, setViewMode] = useState<'edit' | 'presentation'>('edit');
+  const [presentationGroupIdx, setPresentationGroupIdx] = useState(0);
+  const [presentationItemIdx, setPresentationItemIdx] = useState(0);
+  const [presEdgePopup, setPresEdgePopup] = useState<{ relId: number, segmentIdx: number } | null>(null);
+
+  useEffect(() => {
+    let max_x = 80;
+    let max_y = 60;
+    let shiftY = 0;
+    let shiftX = 0;
+
+    for (const e of entities) {
+        const eh = 4 + (e.fields ? e.fields.length : 0);
+        const ew = e.fields ? Math.max(6, 4 + Math.max(0, ...e.fields.map(f => f.name.length)) * 0.4) : 6;
+        
+        const topEdge = e.y - Math.ceil(eh / 2);
+        const leftEdge = e.x - Math.ceil(ew / 2);
+        
+        if (topEdge < 2) {
+            const neededY = 2 - topEdge;
+            if (neededY > shiftY) shiftY = neededY;
+        }
+        if (leftEdge < 2) {
+            const neededX = 2 - leftEdge;
+            if (neededX > shiftX) shiftX = neededX;
+        }
+    }
+
+    if (shiftX > 0 || shiftY > 0) {
+        setEntities(ents => ents.map(e => ({ ...e, x: e.x + shiftX, y: e.y + shiftY })));
+        return;
+    }
+
+    for (const e of entities) {
+        const eh = 4 + (e.fields ? e.fields.length : 0);
+        const ew = e.fields ? Math.max(6, 4 + Math.max(0, ...e.fields.map(f => f.name.length)) * 0.4) : 6;
+        
+        if (e.x + Math.ceil(ew / 2) + 10 > max_x) max_x = Math.ceil(e.x + ew / 2) + 10;
+        if (e.y + Math.ceil(eh / 2) + 10 > max_y) max_y = Math.ceil(e.y + eh / 2) + 10;
+    }
+
+    if (max_x !== gridDim.w || max_y !== gridDim.h) {
+        updateGridDimensions(max_x, max_y);
+        setGridDim({ w: max_x, h: max_y });
+    }
+  }, [entities, gridDim.w, gridDim.h]);
+
+  useEffect(() => {
+      if (viewMode !== 'presentation') return;
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+          if (relationships.length === 0) return;
+          
+          let gIdx = presentationGroupIdx;
+          if (gIdx >= relationships.length) gIdx = 0;
+          
+          const currentRel = relationships[gIdx];
+          const itemCount = currentRel.entityIds.length;
+          const maxIIdx = Math.max(0, itemCount - 2);
+          let iIdx = Math.min(presentationItemIdx, maxIIdx);
+
+          if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              let nextGIdx = (gIdx + 1) % relationships.length;
+              setPresentationGroupIdx(nextGIdx);
+              setPresentationItemIdx(0);
+              setPresEdgePopup(null);
+          } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              let prevGIdx = (gIdx - 1 + relationships.length) % relationships.length;
+              setPresentationGroupIdx(prevGIdx);
+              setPresentationItemIdx(0);
+              setPresEdgePopup(null);
+          } else if (e.key === 'ArrowRight') {
+              if (itemCount > 1) {
+                  e.preventDefault();
+                  setPresentationItemIdx(Math.min(maxIIdx, iIdx + 1));
+                  setPresEdgePopup(null);
+              }
+          } else if (e.key === 'ArrowLeft') {
+              if (itemCount > 1) {
+                  e.preventDefault();
+                  setPresentationItemIdx(Math.max(0, iIdx - 1));
+                  setPresEdgePopup(null);
+              }
+          }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [viewMode, presentationGroupIdx, presentationItemIdx, relationships]);
 
   const handleSave = () => {
       const scrollX = document.getElementById('scroll-container')?.scrollLeft || 0;
@@ -145,6 +238,7 @@ export default function App() {
                   if (ent.y + 10 > maxH) maxH = ent.y + 10;
               });
               updateGridDimensions(maxW, maxH);
+              setGridDim({ w: maxW, h: maxH });
 
               setEntities(loadedEntities);
               setRelationships(loadedRels);
@@ -157,7 +251,6 @@ export default function App() {
                       scrollContainer.scrollLeft = loadedScrollX;
                       scrollContainer.scrollTop = loadedScrollY;
                   }
-                  // Prøv å klikke på knappen helt til den er aktivert (React har rendret ferdig)
                   let attempts = 0;
                   const interval = setInterval(() => {
                       const btn = document.getElementById('beregn-ruter-btn') as HTMLButtonElement;
@@ -165,7 +258,7 @@ export default function App() {
                           btn.click();
                           clearInterval(interval);
                       }
-                      if (attempts++ > 20) clearInterval(interval); // Gi opp etter 2 sekunder
+                      if (attempts++ > 20) clearInterval(interval);
                   }, 100);
               }, 100);
           } catch (err) {
@@ -173,7 +266,7 @@ export default function App() {
           }
       };
       reader.readAsText(file);
-      event.target.value = ''; // Reset input to allow reloading same file
+      event.target.value = '';
   };
 
   const getAllBoxes = (ents: EREntity[]): ObstacleBox[] => {
@@ -181,17 +274,17 @@ export default function App() {
           const ew = 6;
           const eh = 4 + e.fields.length;
           let startX = Math.max(0, e.x - Math.floor(ew / 2));
-          let endX = Math.min(W - 1, e.x + Math.ceil(ew / 2));
+          let endX = Math.min(gridDim.w - 1, e.x + Math.ceil(ew / 2));
           let startY = Math.max(0, e.y - Math.floor(eh / 2));
-          let endY = Math.min(H - 1, e.y + Math.ceil(eh / 2));
+          let endY = Math.min(gridDim.h - 1, e.y + Math.ceil(eh / 2));
 
           let cells = [];
           for (let y = startY; y <= endY; y++) {
               for (let x = startX; x <= endX; x++) {
-                  cells.push(y * W + x);
+                  cells.push(y * gridDim.w + x);
               }
           }
-          return { id: e.id, center: e.y * W + e.x, cells };
+          return { id: e.id, center: e.y * gridDim.w + e.x, cells };
       });
   };
 
@@ -236,7 +329,7 @@ export default function App() {
               
               let nodes = rel.entityIds.map(eid => {
                   const e = currentEntities.find(ent => ent.id === eid);
-                  return e ? e.y * W + e.x : -1;
+                  return e ? e.y * gridDim.w + e.x : -1;
               }).filter(n => n !== -1);
 
               let allBoxes = getAllBoxes(currentEntities);
@@ -269,7 +362,7 @@ export default function App() {
                   if (index !== -1) {
                       const newEntityIds = [...rel.entityIds];
                       newEntityIds.splice(index, 1);
-                      const newCards = [...rel.cardinalities];
+                      const newCards = [...(rel.cardinalities || [])];
                       if (newCards.length > 0) {
                           newCards.splice(Math.max(0, index - 1), 1);
                       }
@@ -277,7 +370,7 @@ export default function App() {
                   } else {
                       const lastId = rel.entityIds.length > 0 ? rel.entityIds[rel.entityIds.length - 1] : undefined;
                       if (lastId !== targetEntityId) {
-                          const newCards = rel.entityIds.length > 0 ? [...rel.cardinalities, 'none|none'] : rel.cardinalities;
+                          const newCards = rel.entityIds.length > 0 ? [...(rel.cardinalities || []), 'none|none'] : (rel.cardinalities || []);
                           return { ...rel, entityIds: [...rel.entityIds, targetEntityId], paths: null, cardinalities: newCards };
                       }
                   }
@@ -462,18 +555,33 @@ export default function App() {
                     <Button icon={<Save20Regular />} onClick={handleSave}>
                         Lagre
                     </Button>
+                    <Button 
+                        appearance={viewMode === 'presentation' ? 'primary' : 'outline'}
+                        onClick={() => {
+                            if (viewMode === 'edit') {
+                                setPresentationGroupIdx(0);
+                                setPresentationItemIdx(0);
+                                setPresEdgePopup(null);
+                                setViewMode('presentation');
+                            } else {
+                                setViewMode('edit');
+                            }
+                        }}
+                    >
+                        {viewMode === 'edit' ? 'Start Phone Mode' : 'Tilbake til Redigering'}
+                    </Button>
                 </div>
             </div>
 
 
 
             <div className={classes.canvasContainer} style={{ overflow: 'auto', position: 'relative' }} id="scroll-container">
-                <div style={{ width: W * 40 * zoom, height: H * 40 * zoom, position: 'relative' }}>
+                <div style={{ width: gridDim.w * 40 * zoom, height: gridDim.h * 40 * zoom, position: 'relative' }}>
                     <div 
                         ref={containerRef}
                         style={{
-                            width: W * 40,
-                            height: H * 40,
+                            width: gridDim.w * 40,
+                            height: gridDim.h * 40,
                             transform: `scale(${zoom})`,
                             transformOrigin: 'top left',
                             position: 'absolute',
@@ -485,6 +593,8 @@ export default function App() {
                             relationships={relationships} 
                             activeRelationshipId={activeRelId} 
                             isSolving={isSolving} 
+                            gridW={gridDim.w}
+                            gridH={gridDim.h}
                             onGridClick={handleGridClick} 
                             onEdgeClick={(relId, segmentIdx, x, y) => {
                                 setEdgePopup({ relId, segmentIdx, x, y });
@@ -493,22 +603,22 @@ export default function App() {
                         />
                         
                         {/* Render ER Boxes as overlay */}
-                        {entities.map(entity => {
+                        {viewMode === 'edit' && entities.map(entity => {
                             const connectedRels = relationships.filter(r => r.entityIds.includes(entity.id));
-                            const connectedColors = connectedRels.map(r => SNAKE_COLORS[r.colorIdx].main);
+                            const connectedColors = connectedRels.map(r => SNAKE_COLORS[(r.colorIdx || 0) % SNAKE_COLORS.length].main);
 
-                            const entityOrders = connectedRels.map(rel => {
+                            const entityOrders = connectedRels.map(r => {
                                 let order: number;
                                 let isConflict = false;
-                                if (rel.customOrders && rel.customOrders[entity.id] !== undefined) {
-                                    order = rel.customOrders[entity.id];
-                                    isConflict = Object.values(rel.customOrders).filter(o => o === order).length > 1;
+                                if (r.customOrders && r.customOrders[entity.id] !== undefined) {
+                                    order = r.customOrders[entity.id];
+                                    isConflict = Object.values(r.customOrders).filter(o => o === order).length > 1;
                                 } else {
-                                    order = rel.entityIds.indexOf(entity.id) + 1;
+                                    order = r.entityIds.indexOf(entity.id) + 1;
                                 }
                                 return {
-                                    relId: rel.id,
-                                    color: SNAKE_COLORS[rel.colorIdx].main,
+                                    relId: r.id,
+                                    color: SNAKE_COLORS[(r.colorIdx || 0) % SNAKE_COLORS.length].main,
                                     order,
                                     isConflict
                                 };
@@ -537,13 +647,13 @@ export default function App() {
                         const e1 = entities.find(e => e.id === rel.entityIds[edgePopup.segmentIdx])?.name || `Boks 1`;
                         const e2 = entities.find(e => e.id === rel.entityIds[edgePopup.segmentIdx + 1])?.name || `Boks 2`;
                         
-                        const card = rel.cardinalities[edgePopup.segmentIdx] || 'none|none';
+                        const card = (rel.cardinalities || [])[edgePopup.segmentIdx] || 'none|none';
                         const [leftCard, rightCard] = card.includes('|') ? card.split('|') : [card, 'none'];
 
                         const updateCard = (left: string, right: string) => {
                             setRelationships(rels => rels.map(r => {
                                 if (r.id === rel.id) {
-                                    const newCards = [...r.cardinalities];
+                                    const newCards = [...(r.cardinalities || [])];
                                     newCards[edgePopup.segmentIdx] = `${left}|${right}`;
                                     return { ...r, cardinalities: newCards };
                                 }
@@ -563,7 +673,7 @@ export default function App() {
                                 borderRadius: '8px',
                                 padding: '12px',
                                 zIndex: 2000,
-                                border: `2px solid ${SNAKE_COLORS[rel.colorIdx].main}`
+                                border: `2px solid ${SNAKE_COLORS[(rel.colorIdx || 0) % SNAKE_COLORS.length].main}`
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                     <Body1 style={{ fontWeight: 'bold', fontSize: '13px' }}>Kardinalitet</Body1>
@@ -602,6 +712,466 @@ export default function App() {
                     <span style={{ alignSelf: 'center', fontWeight: 'bold' }}>{Math.round(zoom * 100)}%</span>
                     <Button icon={<ZoomIn20Regular />} onClick={() => setZoom(z => Math.min(1.5, z + 0.1))} />
                 </div>
+
+                {/* Presentation Overlay */}
+                {viewMode === 'presentation' && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: '#1e293b',
+                        display: 'flex', flexDirection: 'row',
+                        alignItems: 'center', justifyContent: 'center',
+                        zIndex: 3000,
+                        color: 'white',
+                        overflow: 'hidden',
+                        padding: '40px'
+                    }}>
+                        {relationships.length > 0 ? (() => {
+                            try {
+                                const gIdx = Math.min(presentationGroupIdx, relationships.length - 1);
+                                const rel = relationships[gIdx];
+                                const color = SNAKE_COLORS[(rel.colorIdx || 0) % SNAKE_COLORS.length] || SNAKE_COLORS[0];
+                                
+                                if (!rel || !rel.entityIds) {
+                                    return <div style={{ margin: 'auto' }}>Ugyldig kobling.</div>;
+                                }
+
+                                const itemCount = rel.entityIds.length;
+                                const maxIIdx = Math.max(0, itemCount - 2);
+                                const iIdx = Math.min(presentationItemIdx, maxIIdx);
+                                
+                                // Determine which items to show (max 2)
+                                let displayIndices: number[] = [];
+                                if (itemCount > 0) {
+                                    displayIndices = [iIdx];
+                                    if (itemCount > 1) {
+                                        displayIndices.push(iIdx + 1); // Show current and next
+                                    }
+                                }
+
+                            return (
+                                <div style={{ 
+                                    position: 'relative',
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    gap: '60px',
+                                    backgroundColor: tokens.colorNeutralBackground1,
+                                    color: tokens.colorNeutralForeground1,
+                                    padding: '40px 60px',
+                                    borderRadius: '16px',
+                                    boxShadow: tokens.shadow16
+                                }}>
+                                    {/* Close Button (Top Right of Prompt Box) */}
+                                    <div 
+                                        style={{ 
+                                            position: 'absolute', top: 15, right: 20, cursor: 'pointer', 
+                                            fontSize: '24px', userSelect: 'none', zIndex: 4000,
+                                            transition: 'transform 0.1s'
+                                        }}
+                                        onClick={() => setViewMode('edit')}
+                                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                        title="Lukk Phone Mode"
+                                    >
+                                        ✕
+                                    </div>
+                                    
+                                    {/* Central Area with Left/Right buttons and Cards */}
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '40px' }}>
+                                        
+                                        {/* Left Button */}
+                                        <div 
+                                            style={{ 
+                                                color: 'white', 
+                                                fontSize: '80px', 
+                                                cursor: 'pointer',
+                                                userSelect: 'none',
+                                                transition: 'transform 0.1s',
+                                                padding: '20px',
+                                                visibility: iIdx > 0 ? 'visible' : 'hidden'
+                                            }}
+                                            onClick={() => {
+                                                if (iIdx > 0) {
+                                                    setPresentationItemIdx(Math.max(0, iIdx - 1));
+                                                    setPresEdgePopup(null);
+                                                }
+                                            }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.2)' }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
+                                        >
+                                            ◀
+                                        </div>
+
+                                        {/* Cards Container */}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            {displayIndices.map((idx, mapIdx) => {
+                                                const entId = rel.entityIds[idx];
+                                                const entity = entities.find(e => e.id === entId);
+                                                if (!entity) return null;
+
+                                                const connectedRels = relationships.filter(r => r.entityIds.includes(entity.id));
+                                                const connectedColors = connectedRels.map(r => SNAKE_COLORS[(r.colorIdx || 0) % SNAKE_COLORS.length].main);
+                                                
+                                                const entityOrders = connectedRels.map(r => {
+                                                    let order: number;
+                                                    let isConflict = false;
+                                                    if (r.customOrders && r.customOrders[entity.id] !== undefined) {
+                                                        order = r.customOrders[entity.id];
+                                                        isConflict = Object.values(r.customOrders).filter(o => o === order).length > 1;
+                                                    } else {
+                                                        order = r.entityIds.indexOf(entity.id) + 1;
+                                                    }
+                                                    return {
+                                                        relId: r.id,
+                                                        color: SNAKE_COLORS[(r.colorIdx || 0) % SNAKE_COLORS.length].main,
+                                                        order,
+                                                        isConflict
+                                                    };
+                                                });
+
+                                                const box = (
+                                                    <div 
+                                                        key={`${entId}-${mapIdx}-box`} 
+                                                        style={{ position: 'relative', zIndex: 10 }}
+                                                        draggable={true}
+                                                        onDragStart={(e) => {
+                                                            e.dataTransfer.setData('text/plain', idx.toString());
+                                                        }}
+                                                        onDragOver={(e) => e.preventDefault()}
+                                                        onDrop={(e) => {
+                                                            e.preventDefault();
+                                                            const dragIdxStr = e.dataTransfer.getData('text/plain');
+                                                            if (!dragIdxStr) return;
+                                                            const dragIdx = parseInt(dragIdxStr, 10);
+                                                            if (dragIdx === idx) return;
+
+                                                            setRelationships(rels => rels.map(r => {
+                                                                if (r.id === rel.id) {
+                                                                    const newIds = [...r.entityIds];
+                                                                    const temp = newIds[dragIdx];
+                                                                    newIds[dragIdx] = newIds[idx];
+                                                                    newIds[idx] = temp;
+                                                                    return { ...r, entityIds: newIds };
+                                                                }
+                                                                return r;
+                                                            }));
+                                                        }}
+                                                    >
+                                                        <ERBox 
+                                                            entity={entity} 
+                                                            connectedColors={connectedColors}
+                                                            containerRef={containerRef} 
+                                                            entityOrders={entityOrders}
+                                                            onUpdateOrder={(relId, newOrder) => updateEntityOrder(relId, entity.id, newOrder)}
+                                                            onUpdateEntity={updateEntity} 
+                                                            onDeleteEntity={deleteEntity} 
+                                                            onToggleEntity={() => {
+                                                                if (activeRelId === rel.id && rel.entityIds.includes(entity.id)) return;
+                                                                toggleEntityInActiveRel(entity.id);
+                                                            }}
+                                                            isPresentationMode={true}
+                                                        />
+                                                    </div>
+                                                );
+
+                                                if (mapIdx === 0 && displayIndices.length > 1) {
+                                                    const edgeCard = (rel.cardinalities || [])[iIdx] || 'none|none';
+                                                    const [lC, rC] = (typeof edgeCard === 'string' && edgeCard.includes('|')) ? edgeCard.split('|') : [edgeCard, 'none'];
+                                                    
+                                                    return (
+                                                        <Fragment key={`${entId}-${mapIdx}-fragment`}>
+                                                            {box}
+                                                            <div 
+                                                                style={{
+                                                                    width: '120px',
+                                                                    height: '6px',
+                                                                    backgroundColor: color.main,
+                                                                    cursor: 'pointer',
+                                                                    boxShadow: `0 0 10px ${color.glow}`,
+                                                                    position: 'relative',
+                                                                    zIndex: 0,
+                                                                    margin: '0 -20px',
+                                                                    display: 'flex',
+                                                                    justifyContent: 'space-between',
+                                                                    alignItems: 'center'
+                                                                }}
+                                                                onClick={() => setPresEdgePopup({ relId: rel.id, segmentIdx: iIdx })}
+                                                            >
+                                                                {/* Display current cardinalities on the line */}
+                                                                <span style={{ position: 'absolute', top: -20, left: 0, fontSize: '12px', fontWeight: 'bold' }}>{lC !== 'none' ? lC : ''}</span>
+                                                                <span style={{ position: 'absolute', top: -20, right: 0, fontSize: '12px', fontWeight: 'bold' }}>{rC !== 'none' ? rC : ''}</span>
+                                                            </div>
+                                                        </Fragment>
+                                                    );
+                                                }
+
+                                                return box;
+                                            })}
+                                            {(itemCount === 0 || (displayIndices.length > 0 && displayIndices[displayIndices.length - 1] === itemCount - 1)) && (
+                                                <div 
+                                                    style={{ 
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                                        cursor: 'pointer', fontSize: '80px',
+                                                        marginLeft: '40px',
+                                                        userSelect: 'none',
+                                                        transition: 'transform 0.1s'
+                                                    }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                                    onClick={() => {
+                                                        const newId = Date.now();
+                                                        setEntities(ents => {
+                                                            let newX = 0;
+                                                            let newY = 0;
+                                                            const lastEntityId = rel.entityIds.length > 0 ? rel.entityIds[rel.entityIds.length - 1] : undefined;
+                                                            const lastEntity = ents.find(e => e.id === lastEntityId);
+                                                            
+                                                            if (lastEntity) {
+                                                                newX = (lastEntity.x !== undefined ? lastEntity.x : 0) + 8;
+                                                                newY = (lastEntity.y !== undefined ? lastEntity.y : 0);
+                                                                // Find first empty spot to the right
+                                                                while (ents.some(e => Math.abs(e.x - newX) < 4 && e.y === newY)) {
+                                                                    newX += 8;
+                                                                }
+                                                            }
+                                                            
+                                                            const newEntity = {
+                                                                id: newId,
+                                                                name: `Boks ${ents.length + 1}`,
+                                                                fields: [],
+                                                                x: newX,
+                                                                y: newY,
+                                                                colorIdx: rel.colorIdx || 0
+                                                            };
+                                                            return [...ents, newEntity];
+                                                        });
+                                                        setRelationships(rels => rels.map(r => {
+                                                            if (r.id === rel.id) {
+                                                                const newCards = r.entityIds.length > 0 ? [...(r.cardinalities || []), 'none|none'] : (r.cardinalities || []);
+                                                                return { ...r, entityIds: [...r.entityIds, newId], cardinalities: newCards };
+                                                            }
+                                                            return r;
+                                                        }));
+                                                        // Move view to the newly added entity
+                                                        setPresentationItemIdx(Math.max(0, rel.entityIds.length - 1));
+                                                    }}
+                                                >+</div>
+                                            )}
+                                        </div>
+
+                                        {/* Right Button */}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <div 
+                                                style={{ 
+                                                    fontSize: '80px', 
+                                                    cursor: 'pointer',
+                                                    userSelect: 'none',
+                                                    transition: 'transform 0.1s',
+                                                    padding: '20px',
+                                                    visibility: iIdx < maxIIdx ? 'visible' : 'hidden'
+                                                }}
+                                                onClick={() => {
+                                                    if (iIdx < maxIIdx) {
+                                                        setPresentationItemIdx(Math.min(maxIIdx, iIdx + 1));
+                                                        setPresEdgePopup(null);
+                                                    }
+                                                }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.2)' }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
+                                            >
+                                                ▶
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Right Side: Up/Down Group Navigation */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '80px', visibility: relationships.length > 1 ? 'visible' : 'hidden' }}>
+                                            <div 
+                                                style={{ 
+                                                    fontSize: '80px', 
+                                                    cursor: 'pointer',
+                                                    userSelect: 'none',
+                                                    transition: 'transform 0.1s',
+                                                    visibility: gIdx > 0 ? 'visible' : 'hidden'
+                                                }}
+                                                onClick={() => {
+                                                    if (gIdx > 0) {
+                                                        const newIdx = gIdx - 1;
+                                                        setPresentationGroupIdx(newIdx);
+                                                        setActiveRelId(relationships[newIdx].id);
+                                                        setPresentationItemIdx(0);
+                                                        setPresEdgePopup(null);
+                                                    }
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)' }
+                                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)' }
+                                            >
+                                                ▲
+                                            </div>
+                                            <div 
+                                                style={{ 
+                                                    fontSize: '80px', 
+                                                    cursor: 'pointer',
+                                                    userSelect: 'none',
+                                                    transition: 'transform 0.1s',
+                                                    visibility: gIdx < relationships.length - 1 ? 'visible' : 'hidden'
+                                                }}
+                                                onClick={() => {
+                                                    if (gIdx < relationships.length - 1) {
+                                                        const newIdx = gIdx + 1;
+                                                        setPresentationGroupIdx(newIdx);
+                                                        setActiveRelId(relationships[newIdx].id);
+                                                        setPresentationItemIdx(0);
+                                                        setPresEdgePopup(null);
+                                                    }
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)' }
+                                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)' }
+                                            >
+                                                ▼
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Far Right: Dine Koblinger List */}
+                                    <div style={{ 
+                                        width: '280px',
+                                        maxHeight: '400px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '12px',
+                                        borderLeft: `1px solid ${tokens.colorNeutralStroke1}`,
+                                        paddingLeft: '40px'
+                                    }}>
+                                        <Subtitle1 style={{ margin: 0, color: tokens.colorNeutralForeground1 }}>Dine Koblinger</Subtitle1>
+                                        <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '8px' }}>
+                                            {relationships.map((r) => {
+                                                const isAct = r.id === activeRelId;
+                                                const colors = SNAKE_COLORS[(r.colorIdx || 0) % SNAKE_COLORS.length];
+                                                return (
+                                                    <div 
+                                                        key={r.id}
+                                                        className={`${classes.relationshipCard} ${isAct ? classes.relationshipCardActive : ''}`}
+                                                        style={{ borderColor: isAct ? colors.main : 'transparent', cursor: 'pointer' }}
+                                                        onClick={() => {
+                                                            setActiveRelId(r.id);
+                                                        }}
+                                                    >
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                            <div style={{ minWidth: '16px', height: '16px', borderRadius: '4px', backgroundColor: colors.main, boxShadow: `0 0 8px ${colors.glow}` }} />
+                                                            <div style={{ overflow: 'hidden' }}>
+                                                                <Body1 style={{ fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                                                                    {r.entityIds.length === 0 ? "Ny kobling" : 
+                                                                    r.entityIds.map(eid => entities.find(e => e.id === eid)?.name).join(' - ')}
+                                                                </Body1>
+                                                                <div style={{ fontSize: '12px', color: tokens.colorNeutralForeground3 }}>
+                                                                    Kobler {r.entityIds.length} bokser
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: `1px solid ${tokens.colorNeutralStroke1}` }}>
+                                            <Button 
+                                                icon={<Add20Filled />} 
+                                                onClick={() => {
+                                                    addNewRelationship();
+                                                    // Move view to the newly created relationship
+                                                    const newIdx = relationships.length;
+                                                    setTimeout(() => {
+                                                        setPresentationGroupIdx(newIdx);
+                                                        setPresentationItemIdx(0);
+                                                    }, 50);
+                                                }} 
+                                                disabled={isSolving}
+                                                size="large"
+                                                style={{ width: '100%' }}
+                                            >
+                                                Ny Kobling
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                            } catch (e: any) {
+                                return <div style={{ margin: 'auto', color: 'red' }}>Feil ved innlasting av presentasjon: {e?.message || 'Ukjent feil'}</div>;
+                            }
+                        })() : <div style={{ margin: 'auto' }}>Ingen koblinger å vise.</div>}
+
+                        {/* Presentation Edge Popup */}
+                        {presEdgePopup && (() => {
+                            try {
+                                const rel = relationships.find(r => r.id === presEdgePopup.relId);
+                                if (!rel) return null;
+                                const e1 = entities.find(e => e.id === rel.entityIds[presEdgePopup.segmentIdx])?.name || `Boks 1`;
+                                const e2 = entities.find(e => e.id === rel.entityIds[presEdgePopup.segmentIdx + 1])?.name || `Boks 2`;
+                                
+                                const card = (rel.cardinalities || [])[presEdgePopup.segmentIdx] || 'none|none';
+                                const [leftCard, rightCard] = (typeof card === 'string' && card.includes('|')) ? card.split('|') : [card, 'none'];
+
+                            const updateCard = (left: string, right: string) => {
+                                setRelationships(rels => rels.map(r => {
+                                    if (r.id === rel.id) {
+                                        const newCards = [...(r.cardinalities || [])];
+                                        newCards[presEdgePopup.segmentIdx] = `${left}|${right}`;
+                                        return { ...r, cardinalities: newCards };
+                                    }
+                                    return r;
+                                }));
+                            };
+
+                            return (
+                                <div style={{
+                                    position: 'absolute',
+                                    left: '50%',
+                                    top: '50%',
+                                    transform: 'translate(-50%, -100%)',
+                                    marginTop: '-20px',
+                                    backgroundColor: tokens.colorNeutralBackground1,
+                                    boxShadow: tokens.shadow16,
+                                    borderRadius: '8px',
+                                    padding: '12px',
+                                    zIndex: 4000,
+                                    border: `2px solid ${SNAKE_COLORS[(rel.colorIdx || 0) % SNAKE_COLORS.length].main}`,
+                                    color: 'black'
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <Body1 style={{ fontWeight: 'bold', fontSize: '13px', color: tokens.colorNeutralForeground1 }}>Kardinalitet</Body1>
+                                        <Button icon={<Dismiss16Regular />} appearance="transparent" onClick={() => setPresEdgePopup(null)} size="small" style={{ minWidth: 24, padding: 0 }} />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '12px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <label style={{ fontSize: '11px', marginBottom: '4px', color: tokens.colorNeutralForeground1 }}>Mot {e1}</label>
+                                            <Select size="small" value={leftCard} onChange={(_e, d) => updateCard(d.value || 'none', rightCard)}>
+                                                <option value="none">Ingen</option>
+                                                <option value="1..1">1..1 (En)</option>
+                                                <option value="0..1">0..1 (Null/En)</option>
+                                                <option value="1..N">1..N (Mange)</option>
+                                                <option value="0..N">0..N (Null/Mange)</option>
+                                            </Select>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <label style={{ fontSize: '11px', marginBottom: '4px', color: tokens.colorNeutralForeground1 }}>Mot {e2}</label>
+                                            <Select size="small" value={rightCard} onChange={(_e, d) => updateCard(leftCard, d.value || 'none')}>
+                                                <option value="none">Ingen</option>
+                                                <option value="1..1">1..1 (En)</option>
+                                                <option value="0..1">0..1 (Null/En)</option>
+                                                <option value="1..N">1..N (Mange)</option>
+                                                <option value="0..N">0..N (Null/Mange)</option>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                            } catch (e: any) {
+                                return <div style={{ margin: 'auto', color: 'red' }}>Feil i popup: {e?.message}</div>;
+                            }
+                        })()}
+                    </div>
+                )}
             </div>
         </div>
 
