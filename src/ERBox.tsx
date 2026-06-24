@@ -75,11 +75,9 @@ interface ERBoxProps {
     isPresentationMode?: boolean;
     isReadOnly?: boolean;
     onClick?: () => void;
-    isTeleportSelected?: boolean;
-    isGhost?: boolean;
 }
 
-export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, containerRef, entityOrders, onUpdateOrder, onUpdateEntity, onDeleteEntity, onToggleEntity, isPresentationMode, isReadOnly, onClick, isTeleportSelected, isGhost }) => {
+export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, containerRef, entityOrders, onUpdateOrder, onUpdateEntity, onDeleteEntity, onToggleEntity, isPresentationMode, isReadOnly, onClick }) => {
     const classes = useStyles();
     const [isEditingName, setIsEditingName] = useState(false);
     const [editingOrderRelId, setEditingOrderRelId] = useState<number | null>(null);
@@ -238,8 +236,8 @@ export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, container
                 top: isPresentationMode ? 'auto' : `${topPx}px`,
                 position: isPresentationMode ? 'relative' : 'absolute',
                 transform: isPresentationMode ? 'none' : 'translate(-50%, -50%)',
-                pointerEvents: (isFollowing || isGhost) ? 'none' : 'auto', 
-                opacity: (isFollowing || isGhost) ? 0.8 : 1,
+                pointerEvents: isFollowing ? 'none' : 'auto', 
+                opacity: isFollowing ? 0.8 : 1,
                 zIndex: isFollowing ? 100 : 10,
                 borderColor: borderCol,
                 margin: isPresentationMode ? '0' : undefined,
