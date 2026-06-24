@@ -104,6 +104,7 @@ export default function App() {
   const recalcTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [viewMode, setViewMode] = useState<'edit' | 'presentation'>('edit');
+  const [phoneOrientation, setPhoneOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [presentationGroupIdx, setPresentationGroupIdx] = useState(0);
   const [presentationItemIdx, setPresentationItemIdx] = useState(0);
   const [presEdgePopup, setPresEdgePopup] = useState<{ relId: number, segmentIdx: number } | null>(null);
@@ -717,14 +718,53 @@ export default function App() {
                 {viewMode === 'presentation' && (
                     <div style={{
                         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                        backgroundColor: '#1e293b',
-                        display: 'flex', flexDirection: 'row',
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        backdropFilter: 'blur(4px)',
+                        display: 'flex', flexDirection: 'column',
                         alignItems: 'center', justifyContent: 'center',
                         zIndex: 3000,
                         color: 'white',
-                        overflow: 'hidden',
-                        padding: '40px'
+                        overflow: 'hidden'
                     }}>
+                        {/* Rotation & Close Controls */}
+                        <div style={{ position: 'absolute', top: 20, right: 20, zIndex: 4001, display: 'flex', gap: '16px' }}>
+                            <Button appearance="primary" onClick={() => setPhoneOrientation(o => o === 'portrait' ? 'landscape' : 'portrait')}>
+                                {phoneOrientation === 'portrait' ? 'Roter til Liggende' : 'Roter til Stående'}
+                            </Button>
+                            <Button onClick={() => setViewMode('edit')}>
+                                Lukk Phone Mode
+                            </Button>
+                        </div>
+                        
+                        {/* Device Frame */}
+                        <div style={{
+                            width: phoneOrientation === 'portrait' ? '412px' : '915px',
+                            height: phoneOrientation === 'portrait' ? '915px' : '412px',
+                            border: '14px solid #111',
+                            borderRadius: '40px',
+                            backgroundColor: tokens.colorNeutralBackground1,
+                            position: 'relative',
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            transform: `scale(${Math.min(1, (window.innerHeight - 80) / (phoneOrientation === 'portrait' ? 915 : 412))})`,
+                            transformOrigin: 'center center',
+                            color: tokens.colorNeutralForeground1,
+                            overflow: 'hidden'
+                        }}>
+                            {/* Camera Pill */}
+                            <div style={{
+                                position: 'absolute',
+                                top: phoneOrientation === 'portrait' ? '12px' : '50%',
+                                left: phoneOrientation === 'portrait' ? '50%' : '12px',
+                                transform: phoneOrientation === 'portrait' ? 'translateX(-50%)' : 'translateY(-50%)',
+                                width: phoneOrientation === 'portrait' ? '120px' : '24px',
+                                height: phoneOrientation === 'portrait' ? '24px' : '120px',
+                                backgroundColor: '#000',
+                                borderRadius: '12px',
+                                zIndex: 1000
+                            }} />
+
                         {relationships.length > 0 ? (() => {
                             try {
                                 const gIdx = Math.min(presentationGroupIdx, relationships.length - 1);
@@ -748,62 +788,55 @@ export default function App() {
                                     }
                                 }
 
-                            return (
-                                <div style={{ 
-                                    position: 'relative',
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center', 
-                                    gap: '60px',
-                                    backgroundColor: tokens.colorNeutralBackground1,
-                                    color: tokens.colorNeutralForeground1,
-                                    padding: '40px 60px',
-                                    borderRadius: '16px',
-                                    boxShadow: tokens.shadow16
-                                }}>
-                                    {/* Close Button (Top Right of Prompt Box) */}
-                                    <div 
-                                        style={{ 
-                                            position: 'absolute', top: 15, right: 20, cursor: 'pointer', 
-                                            fontSize: '24px', userSelect: 'none', zIndex: 4000,
-                                            transition: 'transform 0.1s'
-                                        }}
-                                        onClick={() => setViewMode('edit')}
-                                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                                        title="Lukk Phone Mode"
-                                    >
-                                        ✕
-                                    </div>
-                                    
-                                    {/* Central Area with Left/Right buttons and Cards */}
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '40px' }}>
-                                        
-                                        {/* Left Button */}
-                                        <div 
-                                            style={{ 
-                                                color: 'white', 
-                                                fontSize: '80px', 
-                                                cursor: 'pointer',
-                                                userSelect: 'none',
-                                                transition: 'transform 0.1s',
-                                                padding: '20px',
-                                                visibility: iIdx > 0 ? 'visible' : 'hidden'
-                                            }}
-                                            onClick={() => {
-                                                if (iIdx > 0) {
-                                                    setPresentationItemIdx(Math.max(0, iIdx - 1));
-                                                    setPresEdgePopup(null);
-                                                }
-                                            }}
-                                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.2)' }}
-                                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
-                                        >
-                                            ◀
-                                        </div>
+                                    // In portrait, stack vertically. In landscape, stack horizontally.
+                                    const isVertical = phoneOrientation === 'portrait';
 
-                                        {/* Cards Container */}
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    return (
+                                        <div style={{ 
+                                            flex: 1,
+                                            display: 'flex', 
+                                            flexDirection: isVertical ? 'column' : 'row',
+                                            alignItems: 'center', 
+                                            justifyContent: 'center', 
+                                            gap: '20px',
+                                            padding: '20px',
+                                            overflow: 'auto',
+                                            position: 'relative',
+                                            width: '100%'
+                                        }}>
+                                            
+                                            {/* Top/Left Button for Items */}
+                                            <div 
+                                                style={{ 
+                                                    color: tokens.colorNeutralForeground1, 
+                                                    fontSize: '40px', 
+                                                    cursor: 'pointer',
+                                                    userSelect: 'none',
+                                                    padding: '10px',
+                                                    visibility: iIdx > 0 ? 'visible' : 'hidden',
+                                                    transform: isVertical ? 'rotate(90deg)' : 'none',
+                                                    transition: 'transform 0.1s'
+                                                }}
+                                                onClick={() => {
+                                                    if (iIdx > 0) {
+                                                        setPresentationItemIdx(Math.max(0, iIdx - 1));
+                                                        setPresEdgePopup(null);
+                                                    }
+                                                }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.transform = isVertical ? 'rotate(90deg) scale(1.2)' : 'scale(1.2)' }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.transform = isVertical ? 'rotate(90deg)' : 'none' }}
+                                            >
+                                                ◀
+                                            </div>
+
+                                            {/* Cards Container */}
+                                            <div style={{ 
+                                                display: 'flex', 
+                                                flexDirection: isVertical ? 'column' : 'row',
+                                                alignItems: 'center', 
+                                                justifyContent: 'center',
+                                                gap: isVertical ? '0' : '20px'
+                                            }}>
                                             {displayIndices.map((idx, mapIdx) => {
                                                 const entId = rel.entityIds[idx];
                                                 const entity = entities.find(e => e.id === entId);
@@ -832,7 +865,7 @@ export default function App() {
                                                 const box = (
                                                     <div 
                                                         key={`${entId}-${mapIdx}-box`} 
-                                                        style={{ position: 'relative', zIndex: 10 }}
+                                                        style={{ position: 'relative', zIndex: 10, transform: isVertical ? 'scale(0.85)' : 'scale(0.9)', transformOrigin: 'center center' }}
                                                         draggable={true}
                                                         onDragStart={(e) => {
                                                             e.dataTransfer.setData('text/plain', idx.toString());
@@ -883,23 +916,24 @@ export default function App() {
                                                             {box}
                                                             <div 
                                                                 style={{
-                                                                    width: '120px',
-                                                                    height: '6px',
+                                                                    width: isVertical ? '6px' : '60px',
+                                                                    height: isVertical ? '60px' : '6px',
                                                                     backgroundColor: color.main,
                                                                     cursor: 'pointer',
                                                                     boxShadow: `0 0 10px ${color.glow}`,
                                                                     position: 'relative',
                                                                     zIndex: 0,
-                                                                    margin: '0 -20px',
+                                                                    margin: isVertical ? '-10px 0' : '0 -10px',
                                                                     display: 'flex',
                                                                     justifyContent: 'space-between',
-                                                                    alignItems: 'center'
+                                                                    alignItems: 'center',
+                                                                    flexDirection: isVertical ? 'column' : 'row'
                                                                 }}
                                                                 onClick={() => setPresEdgePopup({ relId: rel.id, segmentIdx: iIdx })}
                                                             >
                                                                 {/* Display current cardinalities on the line */}
-                                                                <span style={{ position: 'absolute', top: -20, left: 0, fontSize: '12px', fontWeight: 'bold' }}>{lC !== 'none' ? lC : ''}</span>
-                                                                <span style={{ position: 'absolute', top: -20, right: 0, fontSize: '12px', fontWeight: 'bold' }}>{rC !== 'none' ? rC : ''}</span>
+                                                                <span style={{ position: 'absolute', [isVertical ? 'right' : 'top']: -20, [isVertical ? 'top' : 'left']: 0, fontSize: '12px', fontWeight: 'bold' }}>{lC !== 'none' ? lC : ''}</span>
+                                                                <span style={{ position: 'absolute', [isVertical ? 'right' : 'top']: -20, [isVertical ? 'bottom' : 'right']: 0, fontSize: '12px', fontWeight: 'bold' }}>{rC !== 'none' ? rC : ''}</span>
                                                             </div>
                                                         </Fragment>
                                                     );
@@ -911,8 +945,8 @@ export default function App() {
                                                 <div 
                                                     style={{ 
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                                                        cursor: 'pointer', fontSize: '80px',
-                                                        marginLeft: '40px',
+                                                        cursor: 'pointer', fontSize: '40px',
+                                                        margin: isVertical ? '20px 0 0 0' : '0 0 0 20px',
                                                         userSelect: 'none',
                                                         transition: 'transform 0.1s'
                                                     }}
@@ -960,146 +994,79 @@ export default function App() {
                                         </div>
 
                                         {/* Right Button */}
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <div 
-                                                style={{ 
-                                                    fontSize: '80px', 
-                                                    cursor: 'pointer',
-                                                    userSelect: 'none',
-                                                    transition: 'transform 0.1s',
-                                                    padding: '20px',
-                                                    visibility: iIdx < maxIIdx ? 'visible' : 'hidden'
-                                                }}
-                                                onClick={() => {
-                                                    if (iIdx < maxIIdx) {
-                                                        setPresentationItemIdx(Math.min(maxIIdx, iIdx + 1));
-                                                        setPresEdgePopup(null);
-                                                    }
-                                                }}
-                                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.2)' }}
-                                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
-                                            >
-                                                ▶
-                                            </div>
+                                        <div 
+                                            style={{ 
+                                                color: tokens.colorNeutralForeground1, 
+                                                fontSize: '40px', 
+                                                cursor: 'pointer',
+                                                userSelect: 'none',
+                                                padding: '10px',
+                                                visibility: iIdx < maxIIdx ? 'visible' : 'hidden',
+                                                transform: isVertical ? 'rotate(90deg)' : 'none',
+                                                transition: 'transform 0.1s'
+                                            }}
+                                            onClick={() => {
+                                                if (iIdx < maxIIdx) {
+                                                    setPresentationItemIdx(Math.min(maxIIdx, iIdx + 1));
+                                                    setPresEdgePopup(null);
+                                                }
+                                            }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.transform = isVertical ? 'rotate(90deg) scale(1.2)' : 'scale(1.2)' }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.transform = isVertical ? 'rotate(90deg)' : 'none' }}
+                                        >
+                                            ▶
                                         </div>
-                                    </div>
 
-                                    {/* Right Side: Up/Down Group Navigation */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '80px', visibility: relationships.length > 1 ? 'visible' : 'hidden' }}>
-                                            <div 
-                                                style={{ 
-                                                    fontSize: '80px', 
-                                                    cursor: 'pointer',
-                                                    userSelect: 'none',
-                                                    transition: 'transform 0.1s',
-                                                    visibility: gIdx > 0 ? 'visible' : 'hidden'
-                                                }}
-                                                onClick={() => {
-                                                    if (gIdx > 0) {
-                                                        const newIdx = gIdx - 1;
-                                                        setPresentationGroupIdx(newIdx);
-                                                        setActiveRelId(relationships[newIdx].id);
-                                                        setPresentationItemIdx(0);
-                                                        setPresEdgePopup(null);
-                                                    }
-                                                }}
-                                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)' }
-                                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)' }
-                                            >
-                                                ▲
-                                            </div>
-                                            <div 
-                                                style={{ 
-                                                    fontSize: '80px', 
-                                                    cursor: 'pointer',
-                                                    userSelect: 'none',
-                                                    transition: 'transform 0.1s',
-                                                    visibility: gIdx < relationships.length - 1 ? 'visible' : 'hidden'
-                                                }}
-                                                onClick={() => {
-                                                    if (gIdx < relationships.length - 1) {
-                                                        const newIdx = gIdx + 1;
-                                                        setPresentationGroupIdx(newIdx);
-                                                        setActiveRelId(relationships[newIdx].id);
-                                                        setPresentationItemIdx(0);
-                                                        setPresEdgePopup(null);
-                                                    }
-                                                }}
-                                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)' }
-                                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)' }
-                                            >
-                                                ▼
-                                            </div>
-                                        </div>
+                                        {/* Group Navigation (Top/Bottom corners) */}
+                                        {relationships.length > 1 && (
+                                            <>
+                                                <div 
+                                                    style={{ 
+                                                        position: 'absolute', top: 10, right: 10,
+                                                        fontSize: '30px', cursor: 'pointer', userSelect: 'none',
+                                                        visibility: gIdx > 0 ? 'visible' : 'hidden',
+                                                        color: tokens.colorPaletteBlueBorderActive
+                                                    }}
+                                                    onClick={() => {
+                                                        if (gIdx > 0) {
+                                                            const newIdx = gIdx - 1;
+                                                            setPresentationGroupIdx(newIdx);
+                                                            setActiveRelId(relationships[newIdx].id);
+                                                            setPresentationItemIdx(0);
+                                                            setPresEdgePopup(null);
+                                                        }
+                                                    }}
+                                                >
+                                                    ▲
+                                                </div>
+                                                <div 
+                                                    style={{ 
+                                                        position: 'absolute', bottom: 10, right: 10,
+                                                        fontSize: '30px', cursor: 'pointer', userSelect: 'none',
+                                                        visibility: gIdx < relationships.length - 1 ? 'visible' : 'hidden',
+                                                        color: tokens.colorPaletteBlueBorderActive
+                                                    }}
+                                                    onClick={() => {
+                                                        if (gIdx < relationships.length - 1) {
+                                                            const newIdx = gIdx + 1;
+                                                            setPresentationGroupIdx(newIdx);
+                                                            setActiveRelId(relationships[newIdx].id);
+                                                            setPresentationItemIdx(0);
+                                                            setPresEdgePopup(null);
+                                                        }
+                                                    }}
+                                                >
+                                                    ▼
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
-
-                                    {/* Far Right: Dine Koblinger List */}
-                                    <div style={{ 
-                                        width: '280px',
-                                        maxHeight: '400px',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '12px',
-                                        borderLeft: `1px solid ${tokens.colorNeutralStroke1}`,
-                                        paddingLeft: '40px'
-                                    }}>
-                                        <Subtitle1 style={{ margin: 0, color: tokens.colorNeutralForeground1 }}>Dine Koblinger</Subtitle1>
-                                        <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '8px' }}>
-                                            {relationships.map((r) => {
-                                                const isAct = r.id === activeRelId;
-                                                const colors = SNAKE_COLORS[(r.colorIdx || 0) % SNAKE_COLORS.length];
-                                                return (
-                                                    <div 
-                                                        key={r.id}
-                                                        className={`${classes.relationshipCard} ${isAct ? classes.relationshipCardActive : ''}`}
-                                                        style={{ borderColor: isAct ? colors.main : 'transparent', cursor: 'pointer' }}
-                                                        onClick={() => {
-                                                            setActiveRelId(r.id);
-                                                        }}
-                                                    >
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                            <div style={{ minWidth: '16px', height: '16px', borderRadius: '4px', backgroundColor: colors.main, boxShadow: `0 0 8px ${colors.glow}` }} />
-                                                            <div style={{ overflow: 'hidden' }}>
-                                                                <Body1 style={{ fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
-                                                                    {r.entityIds.length === 0 ? "Ny kobling" : 
-                                                                    r.entityIds.map(eid => entities.find(e => e.id === eid)?.name).join(' - ')}
-                                                                </Body1>
-                                                                <div style={{ fontSize: '12px', color: tokens.colorNeutralForeground3 }}>
-                                                                    Kobler {r.entityIds.length} bokser
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                        <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: `1px solid ${tokens.colorNeutralStroke1}` }}>
-                                            <Button 
-                                                icon={<Add20Filled />} 
-                                                onClick={() => {
-                                                    addNewRelationship();
-                                                    // Move view to the newly created relationship
-                                                    const newIdx = relationships.length;
-                                                    setTimeout(() => {
-                                                        setPresentationGroupIdx(newIdx);
-                                                        setPresentationItemIdx(0);
-                                                    }, 50);
-                                                }} 
-                                                disabled={isSolving}
-                                                size="large"
-                                                style={{ width: '100%' }}
-                                            >
-                                                Ny Kobling
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
+                                );
                             } catch (e: any) {
                                 return <div style={{ margin: 'auto', color: 'red' }}>Feil ved innlasting av presentasjon: {e?.message || 'Ukjent feil'}</div>;
                             }
                         })() : <div style={{ margin: 'auto' }}>Ingen koblinger å vise.</div>}
+                        </div>
 
                         {/* Presentation Edge Popup */}
                         {presEdgePopup && (() => {
