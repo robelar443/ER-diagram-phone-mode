@@ -848,7 +848,7 @@ export default function App() {
                                         return (
                                             <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
                                                 {renderDiagram(true, phoneZoom)}
-                                                <div style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
+                                                <div style={{ position: 'fixed', bottom: 20, left: 20, zIndex: 1000 }}>
                                                     <Button 
                                                         appearance="primary" 
                                                         onClick={() => startSolve()}
