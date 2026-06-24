@@ -316,7 +316,7 @@ export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, container
                         <h3 className={classes.headerTitle} onDoubleClick={() => !isReadOnly && setIsEditingName(true)}>{entity.name}</h3>
                     )}
                 </div>
-                {!isReadOnly && !isPresentationMode && (
+                {!isReadOnly && (
                     <div style={{display: 'flex', gap: '4px'}}>
                         {!isEditingName && <Button icon={<Edit16Regular />} appearance="transparent" onClick={() => setIsEditingName(true)} style={{color: 'white', minWidth: '24px', padding: '0 4px'}} />}
                         <Button icon={<Dismiss16Regular />} appearance="transparent" onClick={() => onDeleteEntity(entity.id)} style={{color: 'white', minWidth: '24px', padding: '0 4px'}} />
@@ -356,7 +356,7 @@ export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, container
                 ))}
             </div>
 
-            {!isReadOnly && !isPresentationMode && (
+            {!isReadOnly && (
                 <>
                     <Divider />
                     <div className={classes.footer}>
