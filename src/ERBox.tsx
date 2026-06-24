@@ -73,9 +73,10 @@ interface ERBoxProps {
     onDeleteEntity: (id: number) => void;
     onToggleEntity: () => void;
     isPresentationMode?: boolean;
+    isReadOnly?: boolean;
 }
 
-export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, containerRef, entityOrders, onUpdateOrder, onUpdateEntity, onDeleteEntity, onToggleEntity, isPresentationMode }) => {
+export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, containerRef, entityOrders, onUpdateOrder, onUpdateEntity, onDeleteEntity, onToggleEntity, isPresentationMode, isReadOnly }) => {
     const classes = useStyles();
     const [isEditingName, setIsEditingName] = useState(false);
     const [editingOrderRelId, setEditingOrderRelId] = useState<number | null>(null);
@@ -208,8 +209,8 @@ export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, container
         headerBg = `linear-gradient(to right, ${stops.join(', ')})`;
         borderCol = connectedColors[0];
     }
-
     const handleCardClick = (e: React.MouseEvent) => {
+        if (isReadOnly) return;
         const target = e.target as HTMLElement;
         if (target.tagName === 'INPUT' || target.tagName === 'BUTTON' || target.closest('button')) {
             return;
@@ -218,6 +219,12 @@ export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, container
             return;
         }
         onToggleEntity();
+    };
+
+    const handleHeaderClick = (e: React.MouseEvent) => {
+        if (isPresentationMode || isReadOnly) return;
+        e.stopPropagation(); // Prevent triggering toggle
+        setIsFollowing(f => !f);
     };
 
     return (
@@ -241,7 +248,7 @@ export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, container
                 onClick={handleHeaderClick} 
                 style={{ 
                     pointerEvents: 'auto', 
-                    cursor: isPresentationMode ? 'default' : (isFollowing ? 'grabbing' : 'move'),
+                    cursor: (isPresentationMode || isReadOnly) ? 'default' : (isFollowing ? 'grabbing' : 'move'),
                     background: headerBg 
                 }}
             >
@@ -300,7 +307,7 @@ export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, container
                             )}
                         </div>
                     )}
-                    {isEditingName ? (
+                    {isEditingName && !isReadOnly ? (
                         <Input 
                             value={entity.name} 
                             onChange={handleNameChange} 
@@ -312,13 +319,15 @@ export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, container
                             style={{ minWidth: '80px' }}
                         />
                     ) : (
-                        <h3 className={classes.headerTitle} onDoubleClick={() => setIsEditingName(true)}>{entity.name}</h3>
+                        <h3 className={classes.headerTitle} onDoubleClick={() => !isReadOnly && setIsEditingName(true)}>{entity.name}</h3>
                     )}
                 </div>
-                <div style={{display: 'flex', gap: '4px'}}>
-                   {!isEditingName && <Button icon={<Edit16Regular />} appearance="transparent" onClick={() => setIsEditingName(true)} style={{color: 'white', minWidth: '24px', padding: '0 4px'}} />}
-                   <Button icon={<Dismiss16Regular />} appearance="transparent" onClick={() => onDeleteEntity(entity.id)} style={{color: 'white', minWidth: '24px', padding: '0 4px'}} />
-                </div>
+                {!isReadOnly && !isPresentationMode && (
+                    <div style={{display: 'flex', gap: '4px'}}>
+                        {!isEditingName && <Button icon={<Edit16Regular />} appearance="transparent" onClick={() => setIsEditingName(true)} style={{color: 'white', minWidth: '24px', padding: '0 4px'}} />}
+                        <Button icon={<Dismiss16Regular />} appearance="transparent" onClick={() => onDeleteEntity(entity.id)} style={{color: 'white', minWidth: '24px', padding: '0 4px'}} />
+                    </div>
+                )}
             </div>
             
             <div className={classes.content}>
@@ -330,30 +339,39 @@ export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, container
                 {entity.fields.map((field) => (
                     <div key={field.id} className={classes.fieldRow}>
                         <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: tokens.colorPaletteBlueBorderActive}} />
-                        <Input 
-                            className={classes.fieldInput}
-                            value={field.name}
-                            onChange={(e) => updateField(field.id, e.target.value)}
-                            size="small"
-                            appearance="underline"
-                        />
-                        <Button 
-                            icon={<Dismiss16Regular />} 
-                            appearance="transparent" 
-                            className={classes.deleteButton}
-                            onClick={() => removeField(field.id)}
-                        />
+                        {isReadOnly ? (
+                            <span style={{ fontSize: '12px', flex: 1 }}>{field.name}</span>
+                        ) : (
+                            <>
+                                <Input 
+                                    className={classes.fieldInput}
+                                    value={field.name}
+                                    onChange={(e) => updateField(field.id, e.target.value)}
+                                    size="small"
+                                    appearance="underline"
+                                />
+                                <Button 
+                                    icon={<Dismiss16Regular />} 
+                                    appearance="transparent" 
+                                    className={classes.deleteButton}
+                                    onClick={() => removeField(field.id)}
+                                />
+                            </>
+                        )}
                     </div>
                 ))}
             </div>
 
-            <Divider />
-
-            <div className={classes.footer}>
-                    <Button appearance="transparent" icon={<Add16Regular />} onClick={addField}>
-                        Legg til felt
-                    </Button>
-                </div>
+            {!isReadOnly && !isPresentationMode && (
+                <>
+                    <Divider />
+                    <div className={classes.footer}>
+                        <Button appearance="transparent" icon={<Add16Regular />} onClick={addField}>
+                            Legg til felt
+                        </Button>
+                    </div>
+                </>
+            )}
                 {entityOrders.length > 1 && (
                     <div style={{ padding: '8px', borderTop: `1px solid ${tokens.colorNeutralStroke1}`, display: 'flex', gap: '8px', flexWrap: 'wrap', backgroundColor: tokens.colorNeutralBackground2 }}>
                         {entityOrders.map(eo => (

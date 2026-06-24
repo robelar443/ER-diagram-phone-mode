@@ -105,6 +105,8 @@ export default function App() {
 
   const [viewMode, setViewMode] = useState<'edit' | 'presentation'>('edit');
   const [phoneOrientation, setPhoneOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [phoneViewType, setPhoneViewType] = useState<'pair' | 'overview'>('pair');
+  const [phoneZoom, setPhoneZoom] = useState(0.5);
   const [presentationGroupIdx, setPresentationGroupIdx] = useState(0);
   const [presentationItemIdx, setPresentationItemIdx] = useState(0);
   const [presEdgePopup, setPresEdgePopup] = useState<{ relId: number, segmentIdx: number } | null>(null);
@@ -578,6 +580,76 @@ export default function App() {
         </div>
     );
 
+  const renderDiagram = (isReadOnly: boolean, currentZoom: number, onZoomChange?: (z: number) => void) => {
+      return (
+          <div style={{ width: gridDim.w * 40 * currentZoom, height: gridDim.h * 40 * currentZoom, position: 'relative' }}>
+              <div 
+                  ref={isReadOnly ? undefined : containerRef}
+                  style={{
+                      width: gridDim.w * 40,
+                      height: gridDim.h * 40,
+                      transform: `scale(${currentZoom})`,
+                      transformOrigin: 'top left',
+                      position: 'absolute',
+                      top: 0, left: 0
+                  }}
+              >
+                  <CanvasGrid 
+                      entities={entities} 
+                      relationships={relationships} 
+                      activeRelationshipId={activeRelId} 
+                      isSolving={isSolving} 
+                      gridW={gridDim.w}
+                      gridH={gridDim.h}
+                      onGridClick={isReadOnly ? undefined : handleGridClick} 
+                      onEdgeClick={isReadOnly ? undefined : (relId, segmentIdx, x, y) => {
+                          setEdgePopup({ relId, segmentIdx, x, y });
+                          setActiveRelId(relId);
+                      }}
+                  />
+                  
+                  {/* Render ER Boxes as overlay */}
+                  {entities.map(entity => {
+                      const connectedRels = relationships.filter(r => r.entityIds.includes(entity.id));
+                      const connectedColors = connectedRels.map(r => SNAKE_COLORS[(r.colorIdx || 0) % SNAKE_COLORS.length].main);
+
+                      const entityOrders = connectedRels.map(r => {
+                          let order: number;
+                          let isConflict = false;
+                          if (r.customOrders && r.customOrders[entity.id] !== undefined) {
+                              order = r.customOrders[entity.id];
+                              isConflict = Object.values(r.customOrders).filter(o => o === order).length > 1;
+                          } else {
+                              order = r.entityIds.indexOf(entity.id) + 1;
+                          }
+                          return {
+                              relId: r.id,
+                              color: SNAKE_COLORS[(r.colorIdx || 0) % SNAKE_COLORS.length].main,
+                              order,
+                              isConflict
+                          };
+                      });
+
+                      return (
+                          <ERBox 
+                              key={entity.id} 
+                              entity={entity} 
+                              connectedColors={connectedColors}
+                              containerRef={isReadOnly ? { current: null } as any : containerRef} 
+                              entityOrders={entityOrders}
+                              isReadOnly={isReadOnly}
+                              onUpdateOrder={isReadOnly ? () => {} : (relId, newOrder) => updateEntityOrder(relId, entity.id, newOrder)}
+                              onUpdateEntity={isReadOnly ? () => {} : updateEntity} 
+                              onDeleteEntity={isReadOnly ? () => {} : deleteEntity} 
+                              onToggleEntity={isReadOnly ? () => {} : () => toggleEntityInActiveRel(entity.id)}
+                          />
+                      );
+                  })}
+              </div>
+          </div>
+      );
+  };
+
   return (
     <div className={classes.container}>
         {/* Workspace (Left Panel) */}
@@ -621,135 +693,72 @@ export default function App() {
 
 
             <div className={classes.canvasContainer} style={{ overflow: 'auto', position: 'relative' }} id="scroll-container">
-                <div style={{ width: gridDim.w * 40 * zoom, height: gridDim.h * 40 * zoom, position: 'relative' }}>
-                    <div 
-                        ref={containerRef}
-                        style={{
-                            width: gridDim.w * 40,
-                            height: gridDim.h * 40,
-                            transform: `scale(${zoom})`,
-                            transformOrigin: 'top left',
+                {renderDiagram(false, zoom)}
+
+                {/* Edge Popup */}
+                {edgePopup && (() => {
+                    const rel = relationships.find(r => r.id === edgePopup.relId);
+                    if (!rel) return null;
+                    const e1 = entities.find(e => e.id === rel.entityIds[edgePopup.segmentIdx])?.name || `Boks 1`;
+                    const e2 = entities.find(e => e.id === rel.entityIds[edgePopup.segmentIdx + 1])?.name || `Boks 2`;
+                    
+                    const card = (rel.cardinalities || [])[edgePopup.segmentIdx] || 'none|none';
+                    const [leftCard, rightCard] = card.includes('|') ? card.split('|') : [card, 'none'];
+
+                    const updateCard = (left: string, right: string) => {
+                        setRelationships(rels => rels.map(r => {
+                            if (r.id === rel.id) {
+                                const newCards = [...(r.cardinalities || [])];
+                                newCards[edgePopup.segmentIdx] = `${left}|${right}`;
+                                return { ...r, cardinalities: newCards };
+                            }
+                            return r;
+                        }));
+                    };
+
+                    return (
+                        <div style={{
                             position: 'absolute',
-                            top: 0, left: 0
-                        }}
-                    >
-                        <CanvasGrid 
-                            entities={entities} 
-                            relationships={relationships} 
-                            activeRelationshipId={activeRelId} 
-                            isSolving={isSolving} 
-                            gridW={gridDim.w}
-                            gridH={gridDim.h}
-                            onGridClick={handleGridClick} 
-                            onEdgeClick={(relId, segmentIdx, x, y) => {
-                                setEdgePopup({ relId, segmentIdx, x, y });
-                                setActiveRelId(relId);
-                            }}
-                        />
-                        
-                        {/* Render ER Boxes as overlay */}
-                        {viewMode === 'edit' && entities.map(entity => {
-                            const connectedRels = relationships.filter(r => r.entityIds.includes(entity.id));
-                            const connectedColors = connectedRels.map(r => SNAKE_COLORS[(r.colorIdx || 0) % SNAKE_COLORS.length].main);
-
-                            const entityOrders = connectedRels.map(r => {
-                                let order: number;
-                                let isConflict = false;
-                                if (r.customOrders && r.customOrders[entity.id] !== undefined) {
-                                    order = r.customOrders[entity.id];
-                                    isConflict = Object.values(r.customOrders).filter(o => o === order).length > 1;
-                                } else {
-                                    order = r.entityIds.indexOf(entity.id) + 1;
-                                }
-                                return {
-                                    relId: r.id,
-                                    color: SNAKE_COLORS[(r.colorIdx || 0) % SNAKE_COLORS.length].main,
-                                    order,
-                                    isConflict
-                                };
-                            });
-
-                            return (
-                                <ERBox 
-                                    key={entity.id} 
-                                    entity={entity} 
-                                    connectedColors={connectedColors}
-                                    containerRef={containerRef} 
-                                    entityOrders={entityOrders}
-                                    onUpdateOrder={(relId, newOrder) => updateEntityOrder(relId, entity.id, newOrder)}
-                                    onUpdateEntity={updateEntity} 
-                                    onDeleteEntity={deleteEntity} 
-                                    onToggleEntity={() => toggleEntityInActiveRel(entity.id)}
-                                />
-                            );
-                        })}
-                    </div>
-
-                    {/* Edge Popup */}
-                    {edgePopup && (() => {
-                        const rel = relationships.find(r => r.id === edgePopup.relId);
-                        if (!rel) return null;
-                        const e1 = entities.find(e => e.id === rel.entityIds[edgePopup.segmentIdx])?.name || `Boks 1`;
-                        const e2 = entities.find(e => e.id === rel.entityIds[edgePopup.segmentIdx + 1])?.name || `Boks 2`;
-                        
-                        const card = (rel.cardinalities || [])[edgePopup.segmentIdx] || 'none|none';
-                        const [leftCard, rightCard] = card.includes('|') ? card.split('|') : [card, 'none'];
-
-                        const updateCard = (left: string, right: string) => {
-                            setRelationships(rels => rels.map(r => {
-                                if (r.id === rel.id) {
-                                    const newCards = [...(r.cardinalities || [])];
-                                    newCards[edgePopup.segmentIdx] = `${left}|${right}`;
-                                    return { ...r, cardinalities: newCards };
-                                }
-                                return r;
-                            }));
-                        };
-
-                        return (
-                            <div style={{
-                                position: 'absolute',
-                                left: (edgePopup.x * 40 + 20) * zoom,
-                                top: (edgePopup.y * 40) * zoom,
-                                transform: 'translate(-50%, -100%)',
-                                marginTop: -10,
-                                backgroundColor: tokens.colorNeutralBackground1,
-                                boxShadow: tokens.shadow16,
-                                borderRadius: '8px',
-                                padding: '12px',
-                                zIndex: 2000,
-                                border: `2px solid ${SNAKE_COLORS[(rel.colorIdx || 0) % SNAKE_COLORS.length].main}`
-                            }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <Body1 style={{ fontWeight: 'bold', fontSize: '13px' }}>Kardinalitet</Body1>
-                                    <Button icon={<Dismiss16Regular />} appearance="transparent" onClick={() => setEdgePopup(null)} size="small" style={{ minWidth: 24, padding: 0 }} />
+                            left: (edgePopup.x * 40 + 20) * zoom,
+                            top: (edgePopup.y * 40) * zoom,
+                            transform: 'translate(-50%, -100%)',
+                            marginTop: -10,
+                            backgroundColor: tokens.colorNeutralBackground1,
+                            boxShadow: tokens.shadow16,
+                            borderRadius: '8px',
+                            padding: '12px',
+                            zIndex: 2000,
+                            border: `2px solid ${SNAKE_COLORS[(rel.colorIdx || 0) % SNAKE_COLORS.length].main}`
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <Body1 style={{ fontWeight: 'bold', fontSize: '13px' }}>Kardinalitet</Body1>
+                                <Button icon={<Dismiss16Regular />} appearance="transparent" onClick={() => setEdgePopup(null)} size="small" style={{ minWidth: 24, padding: 0 }} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <label style={{ fontSize: '11px', marginBottom: '4px' }}>Mot {e1}</label>
+                                    <Select size="small" value={leftCard} onChange={(_e, d) => updateCard(d.value || 'none', rightCard)}>
+                                        <option value="none">Ingen</option>
+                                        <option value="1..1">1..1 (En)</option>
+                                        <option value="0..1">0..1 (Null/En)</option>
+                                        <option value="1..N">1..N (Mange)</option>
+                                        <option value="0..N">0..N (Null/Mange)</option>
+                                    </Select>
                                 </div>
-                                <div style={{ display: 'flex', gap: '12px' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <label style={{ fontSize: '11px', marginBottom: '4px' }}>Mot {e1}</label>
-                                        <Select size="small" value={leftCard} onChange={(_e, d) => updateCard(d.value || 'none', rightCard)}>
-                                            <option value="none">Ingen</option>
-                                            <option value="1..1">1..1 (En)</option>
-                                            <option value="0..1">0..1 (Null/En)</option>
-                                            <option value="1..N">1..N (Mange)</option>
-                                            <option value="0..N">0..N (Null/Mange)</option>
-                                        </Select>
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <label style={{ fontSize: '11px', marginBottom: '4px' }}>Mot {e2}</label>
-                                        <Select size="small" value={rightCard} onChange={(_e, d) => updateCard(leftCard, d.value || 'none')}>
-                                            <option value="none">Ingen</option>
-                                            <option value="1..1">1..1 (En)</option>
-                                            <option value="0..1">0..1 (Null/En)</option>
-                                            <option value="1..N">1..N (Mange)</option>
-                                            <option value="0..N">0..N (Null/Mange)</option>
-                                        </Select>
-                                    </div>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <label style={{ fontSize: '11px', marginBottom: '4px' }}>Mot {e2}</label>
+                                    <Select size="small" value={rightCard} onChange={(_e, d) => updateCard(leftCard, d.value || 'none')}>
+                                        <option value="none">Ingen</option>
+                                        <option value="1..1">1..1 (En)</option>
+                                        <option value="0..1">0..1 (Null/En)</option>
+                                        <option value="1..N">1..N (Mange)</option>
+                                        <option value="0..N">0..N (Null/Mange)</option>
+                                    </Select>
                                 </div>
                             </div>
-                        );
-                    })()}
-                </div>
+                        </div>
+                    );
+                })()}
 
                 {/* Zoom Controls */}
                 <div style={{ position: 'sticky', left: '100%', top: '100%', transform: 'translate(-20px, -20px)', width: 'fit-content', display: 'flex', gap: 8, background: 'rgba(255,255,255,0.8)', padding: 8, borderRadius: 8, zIndex: 1000, boxShadow: '0 0 10px rgba(0,0,0,0.1)' }}>
@@ -834,6 +843,19 @@ export default function App() {
 
                                     const isCardsVertical = phoneOrientation === 'portrait';
                                     const isOuterVertical = !isCardsVertical; // Navigation is perpendicular to cards
+
+                                    if (phoneViewType === 'overview') {
+                                        return (
+                                            <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+                                                {renderDiagram(true, phoneZoom)}
+                                                <div style={{ position: 'fixed', bottom: 20, right: 20, display: 'flex', gap: 8, background: 'rgba(255,255,255,0.8)', padding: 8, borderRadius: 8, zIndex: 1000, boxShadow: '0 0 10px rgba(0,0,0,0.1)' }}>
+                                                    <Button icon={<ZoomOut20Regular />} onClick={() => setPhoneZoom(z => Math.max(0.1, z - 0.1))} />
+                                                    <span style={{ alignSelf: 'center', fontWeight: 'bold' }}>{Math.round(phoneZoom * 100)}%</span>
+                                                    <Button icon={<ZoomIn20Regular />} onClick={() => setPhoneZoom(z => Math.min(1.5, z + 0.1))} />
+                                                </div>
+                                            </div>
+                                        );
+                                    }
 
                                     return (
                                         <div 
@@ -1124,6 +1146,13 @@ export default function App() {
                                     disabled={isSolving}
                                 >
                                     Ny kobling
+                                </Button>
+                                <Button 
+                                    appearance="secondary"
+                                    onClick={() => setPhoneViewType(t => t === 'pair' ? 'overview' : 'pair')}
+                                    style={{ marginTop: '8px' }}
+                                >
+                                    {phoneViewType === 'pair' ? 'Vis Helhet' : 'Vis Par'}
                                 </Button>
                             </div>
                         </div>
