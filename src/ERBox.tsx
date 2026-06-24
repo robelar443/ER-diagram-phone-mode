@@ -187,11 +187,9 @@ export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, container
     };
 
     const handleHeaderClick = (e: React.MouseEvent) => {
-        if (isEditingName || isPresentationMode) return;
-        if (!isFollowing) {
-            e.stopPropagation();
-            setIsFollowing(true);
-        }
+        if (isPresentationMode || isReadOnly || isEditingName) return;
+        e.stopPropagation(); // Prevent triggering toggle
+        setIsFollowing(f => !f);
     };
 
     let headerBg = tokens.colorBrandBackground;
@@ -221,11 +219,7 @@ export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, container
         onToggleEntity();
     };
 
-    const handleHeaderClick = (e: React.MouseEvent) => {
-        if (isPresentationMode || isReadOnly) return;
-        e.stopPropagation(); // Prevent triggering toggle
-        setIsFollowing(f => !f);
-    };
+
 
     return (
         <Card 

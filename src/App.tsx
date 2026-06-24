@@ -580,7 +580,7 @@ export default function App() {
         </div>
     );
 
-  const renderDiagram = (isReadOnly: boolean, currentZoom: number, onZoomChange?: (z: number) => void) => {
+  const renderDiagram = (isReadOnly: boolean, currentZoom: number) => {
       return (
           <div style={{ width: gridDim.w * 40 * currentZoom, height: gridDim.h * 40 * currentZoom, position: 'relative' }}>
               <div 
@@ -601,8 +601,8 @@ export default function App() {
                       isSolving={isSolving} 
                       gridW={gridDim.w}
                       gridH={gridDim.h}
-                      onGridClick={isReadOnly ? undefined : handleGridClick} 
-                      onEdgeClick={isReadOnly ? undefined : (relId, segmentIdx, x, y) => {
+                      onGridClick={isReadOnly ? () => {} : handleGridClick} 
+                      onEdgeClick={isReadOnly ? () => {} : (relId, segmentIdx, x, y) => {
                           setEdgePopup({ relId, segmentIdx, x, y });
                           setActiveRelId(relId);
                       }}
