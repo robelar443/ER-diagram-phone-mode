@@ -840,17 +840,13 @@ export default function App() {
                                     }
                                 }
 
-                                    // User requested:
-                                    // 1. Boxes always stacked vertically (column)
-                                    // 2. Arrows always to the left and right (row)
-                                    const isCardsVertical = true;
-                                    const isOuterVertical = false;
+                                    const isVertical = phoneOrientation === 'portrait';
 
                                     return (
                                         <div style={{ 
                                             flex: 1,
                                             display: 'flex', 
-                                            flexDirection: isOuterVertical ? 'column' : 'row',
+                                            flexDirection: isVertical ? 'column' : 'row',
                                             alignItems: 'center', 
                                             justifyContent: 'center', 
                                             gap: '20px',
@@ -869,7 +865,7 @@ export default function App() {
                                                     userSelect: 'none',
                                                     padding: '10px',
                                                     visibility: iIdx > 0 ? 'visible' : 'hidden',
-                                                    transform: isOuterVertical ? 'rotate(90deg)' : 'none',
+                                                    transform: isVertical ? 'rotate(90deg)' : 'none',
                                                     transition: 'transform 0.1s'
                                                 }}
                                                 onClick={() => {
@@ -878,8 +874,8 @@ export default function App() {
                                                         setPresEdgePopup(null);
                                                     }
                                                 }}
-                                                onMouseEnter={(e) => { e.currentTarget.style.transform = isOuterVertical ? 'rotate(90deg) scale(1.2)' : 'scale(1.2)' }}
-                                                onMouseLeave={(e) => { e.currentTarget.style.transform = isOuterVertical ? 'rotate(90deg)' : 'none' }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.transform = isVertical ? 'rotate(90deg) scale(1.2)' : 'scale(1.2)' }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.transform = isVertical ? 'rotate(90deg)' : 'none' }}
                                             >
                                                 ◀
                                             </div>
@@ -887,10 +883,10 @@ export default function App() {
                                             {/* Cards Container */}
                                             <div style={{ 
                                                 display: 'flex', 
-                                                flexDirection: isCardsVertical ? 'column' : 'row',
+                                                flexDirection: isVertical ? 'column' : 'row',
                                                 alignItems: 'center', 
                                                 justifyContent: 'center',
-                                                gap: isCardsVertical ? '0' : '20px'
+                                                gap: isVertical ? '0' : '20px'
                                             }}>
                                             {displayIndices.map((idx, mapIdx) => {
                                                 const entId = rel.entityIds[idx];
@@ -920,7 +916,7 @@ export default function App() {
                                                 const box = (
                                                     <div 
                                                         key={`${entId}-${mapIdx}-box`} 
-                                                        style={{ position: 'relative', zIndex: 10, transform: isCardsVertical ? 'scale(0.85)' : 'scale(0.9)', transformOrigin: 'center center' }}
+                                                        style={{ position: 'relative', zIndex: 10, transform: isVertical ? 'scale(0.85)' : 'scale(0.9)', transformOrigin: 'center center' }}
                                                         draggable={true}
                                                         onDragStart={(e) => {
                                                             e.dataTransfer.setData('text/plain', idx.toString());
@@ -971,24 +967,24 @@ export default function App() {
                                                             {box}
                                                             <div 
                                                                 style={{
-                                                                    width: isCardsVertical ? '6px' : '60px',
-                                                                    height: isCardsVertical ? '60px' : '6px',
+                                                                    width: isVertical ? '6px' : '60px',
+                                                                    height: isVertical ? '60px' : '6px',
                                                                     backgroundColor: color.main,
                                                                     cursor: 'pointer',
                                                                     boxShadow: `0 0 10px ${color.glow}`,
                                                                     position: 'relative',
                                                                     zIndex: 0,
-                                                                    margin: isCardsVertical ? '-10px 0' : '0 -10px',
+                                                                    margin: isVertical ? '-10px 0' : '0 -10px',
                                                                     display: 'flex',
                                                                     justifyContent: 'space-between',
                                                                     alignItems: 'center',
-                                                                    flexDirection: isCardsVertical ? 'column' : 'row'
+                                                                    flexDirection: isVertical ? 'column' : 'row'
                                                                 }}
                                                                 onClick={() => setPresEdgePopup({ relId: rel.id, segmentIdx: iIdx })}
                                                             >
                                                                 {/* Display current cardinalities on the line */}
-                                                                <span style={{ position: 'absolute', [isCardsVertical ? 'right' : 'top']: -20, [isCardsVertical ? 'top' : 'left']: 0, fontSize: '12px', fontWeight: 'bold' }}>{lC !== 'none' ? lC : ''}</span>
-                                                                <span style={{ position: 'absolute', [isCardsVertical ? 'right' : 'top']: -20, [isCardsVertical ? 'bottom' : 'right']: 0, fontSize: '12px', fontWeight: 'bold' }}>{rC !== 'none' ? rC : ''}</span>
+                                                                <span style={{ position: 'absolute', [isVertical ? 'right' : 'top']: -20, [isVertical ? 'top' : 'left']: 0, fontSize: '12px', fontWeight: 'bold' }}>{lC !== 'none' ? lC : ''}</span>
+                                                                <span style={{ position: 'absolute', [isVertical ? 'right' : 'top']: -20, [isVertical ? 'bottom' : 'right']: 0, fontSize: '12px', fontWeight: 'bold' }}>{rC !== 'none' ? rC : ''}</span>
                                                             </div>
                                                         </Fragment>
                                                     );
@@ -1001,7 +997,7 @@ export default function App() {
                                                     style={{ 
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center', 
                                                         cursor: 'pointer', fontSize: '40px',
-                                                        margin: isCardsVertical ? '20px 0 0 0' : '0 0 0 20px',
+                                                        margin: isVertical ? '20px 0 0 0' : '0 0 0 20px',
                                                         userSelect: 'none',
                                                         transition: 'transform 0.1s'
                                                     }}
@@ -1057,7 +1053,7 @@ export default function App() {
                                                 userSelect: 'none',
                                                 padding: '10px',
                                                 visibility: iIdx < maxIIdx ? 'visible' : 'hidden',
-                                                transform: isOuterVertical ? 'rotate(90deg)' : 'none',
+                                                transform: isVertical ? 'rotate(90deg)' : 'none',
                                                 transition: 'transform 0.1s'
                                             }}
                                             onClick={() => {
@@ -1066,8 +1062,8 @@ export default function App() {
                                                     setPresEdgePopup(null);
                                                 }
                                             }}
-                                            onMouseEnter={(e) => { e.currentTarget.style.transform = isOuterVertical ? 'rotate(90deg) scale(1.2)' : 'scale(1.2)' }}
-                                            onMouseLeave={(e) => { e.currentTarget.style.transform = isOuterVertical ? 'rotate(90deg)' : 'none' }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.transform = isVertical ? 'rotate(90deg) scale(1.2)' : 'scale(1.2)' }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.transform = isVertical ? 'rotate(90deg)' : 'none' }}
                                         >
                                             ▶
                                         </div>
