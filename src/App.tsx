@@ -855,7 +855,7 @@ export default function App() {
                                 }
 
                                     const isCardsVertical = phoneOrientation === 'portrait';
-                                    const isOuterVertical = !isCardsVertical; // Navigation is perpendicular to cards
+                                    const isOuterVertical = isCardsVertical; // Navigation follows cards
 
                                     if (phoneViewType === 'overview') {
                                         return (
@@ -889,16 +889,20 @@ export default function App() {
                                             style={{ 
                                             flex: 1,
                                             display: 'flex', 
-                                            flexDirection: isOuterVertical ? 'column' : 'row',
-                                            alignItems: 'center', 
-                                            justifyContent: 'center', 
-                                            gap: '20px',
                                             padding: '20px',
                                             overflow: 'auto',
                                             position: 'relative',
                                             width: '100%',
                                             touchAction: 'none'
                                         }}>
+                                            <div style={{
+                                                margin: 'auto',
+                                                display: 'flex',
+                                                flexDirection: isOuterVertical ? 'column' : 'row',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '20px'
+                                            }}>
                                             
                                             {/* Top/Left Button for Items */}
                                             <div 
@@ -1110,6 +1114,7 @@ export default function App() {
                                             onMouseLeave={(e) => { e.currentTarget.style.transform = isCardsVertical ? 'rotate(90deg)' : 'none' }}
                                         >
                                             ▶
+                                        </div>
                                         </div>
 
 
