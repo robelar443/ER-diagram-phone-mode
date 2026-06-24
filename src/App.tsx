@@ -837,54 +837,6 @@ export default function App() {
 
                                     return (
                                         <div 
-                                            onPointerDown={(e) => {
-                                                (e.currentTarget as any).dataset.startY = e.clientY.toString();
-                                                (e.currentTarget as any).dataset.startX = e.clientX.toString();
-                                            }}
-                                            onPointerUp={(e) => {
-                                                const startYStr = (e.currentTarget as any).dataset.startY;
-                                                const startXStr = (e.currentTarget as any).dataset.startX;
-                                                if (!startYStr || !startXStr) return;
-                                                
-                                                const startY = parseFloat(startYStr);
-                                                const startX = parseFloat(startXStr);
-                                                const dy = e.clientY - startY;
-                                                const dx = e.clientX - startX;
-                                                
-                                                (e.currentTarget as any).dataset.startY = '';
-                                                (e.currentTarget as any).dataset.startX = '';
-                                                
-                                                if (Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx)) {
-                                                    if (dy < 0) {
-                                                        const gIdx = Math.min(presentationGroupIdx, relationships.length - 1);
-                                                        if (gIdx < relationships.length - 1) {
-                                                            setPresentationGroupIdx(gIdx + 1);
-                                                            setPresentationItemIdx(0);
-                                                            setPresEdgePopup(null);
-                                                        }
-                                                    } else {
-                                                        if (presentationGroupIdx > 0) {
-                                                            setPresentationGroupIdx(presentationGroupIdx - 1);
-                                                            setPresentationItemIdx(0);
-                                                            setPresEdgePopup(null);
-                                                        }
-                                                    }
-                                                }
-                                                
-                                                if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
-                                                    if (dx < 0) {
-                                                        if (iIdx < maxIIdx) {
-                                                            setPresentationItemIdx(Math.min(maxIIdx, iIdx + 1));
-                                                            setPresEdgePopup(null);
-                                                        }
-                                                    } else {
-                                                        if (iIdx > 0) {
-                                                            setPresentationItemIdx(Math.max(0, iIdx - 1));
-                                                            setPresEdgePopup(null);
-                                                        }
-                                                    }
-                                                }
-                                            }}
                                             style={{ 
                                             flex: 1,
                                             display: 'flex', 
@@ -929,7 +881,7 @@ export default function App() {
                                                 flexDirection: isCardsVertical ? 'column' : 'row',
                                                 alignItems: 'center', 
                                                 justifyContent: 'center',
-                                                gap: isCardsVertical ? '0' : '20px'
+                                                gap: '0'
                                             }}>
                                             {displayIndices.map((idx, mapIdx) => {
                                                 const entId = rel.entityIds[idx];
@@ -1017,7 +969,7 @@ export default function App() {
                                                                     boxShadow: `0 0 10px ${color.glow}`,
                                                                     position: 'relative',
                                                                     zIndex: 0,
-                                                                    margin: isCardsVertical ? '-20px 0' : '0 -20px',
+                                                                    margin: isCardsVertical ? '-20px 0' : '0 -10px',
                                                                     display: 'flex',
                                                                     justifyContent: 'space-between',
                                                                     alignItems: 'center',
