@@ -840,8 +840,8 @@ export default function App() {
                                     }
                                 }
 
-                                    // In portrait, stack vertically. In landscape, stack horizontally.
-                                    const isVertical = phoneOrientation === 'portrait';
+                                    // In portrait, stack horizontally. In landscape, stack vertically.
+                                    const isVertical = phoneOrientation === 'landscape';
 
                                     return (
                                         <div style={{ 
