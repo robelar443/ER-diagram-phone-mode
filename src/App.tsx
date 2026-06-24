@@ -651,7 +651,6 @@ export default function App() {
                                       setTeleportEntityId(entity.id === teleportEntityId ? null : entity.id);
                                   }
                               }}
-                              isTeleportSelected={teleportEntityId === entity.id}
                               onUpdateOrder={isReadOnly ? () => {} : (relId, newOrder) => updateEntityOrder(relId, entity.id, newOrder)}
                               onUpdateEntity={isReadOnly ? () => {} : updateEntity} 
                               onDeleteEntity={isReadOnly ? () => {} : deleteEntity} 
