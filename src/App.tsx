@@ -1069,49 +1069,7 @@ export default function App() {
                                             ▶
                                         </div>
 
-                                        {/* Group Navigation (Top/Bottom corners) */}
-                                        {relationships.length > 1 && (
-                                            <>
-                                                <div 
-                                                    style={{ 
-                                                        position: 'absolute', top: 10, right: 10,
-                                                        fontSize: '30px', cursor: 'pointer', userSelect: 'none',
-                                                        visibility: gIdx > 0 ? 'visible' : 'hidden',
-                                                        color: tokens.colorPaletteBlueBorderActive
-                                                    }}
-                                                    onClick={() => {
-                                                        if (gIdx > 0) {
-                                                            const newIdx = gIdx - 1;
-                                                            setPresentationGroupIdx(newIdx);
-                                                            setActiveRelId(relationships[newIdx].id);
-                                                            setPresentationItemIdx(0);
-                                                            setPresEdgePopup(null);
-                                                        }
-                                                    }}
-                                                >
-                                                    ▲
-                                                </div>
-                                                <div 
-                                                    style={{ 
-                                                        position: 'absolute', bottom: 10, right: 10,
-                                                        fontSize: '30px', cursor: 'pointer', userSelect: 'none',
-                                                        visibility: gIdx < relationships.length - 1 ? 'visible' : 'hidden',
-                                                        color: tokens.colorPaletteBlueBorderActive
-                                                    }}
-                                                    onClick={() => {
-                                                        if (gIdx < relationships.length - 1) {
-                                                            const newIdx = gIdx + 1;
-                                                            setPresentationGroupIdx(newIdx);
-                                                            setActiveRelId(relationships[newIdx].id);
-                                                            setPresentationItemIdx(0);
-                                                            setPresEdgePopup(null);
-                                                        }
-                                                    }}
-                                                >
-                                                    ▼
-                                                </div>
-                                            </>
-                                        )}
+
                                     </div>
                                 );
                             } catch (e: any) {
@@ -1132,6 +1090,50 @@ export default function App() {
                         }}>
                             <Subtitle1 style={{ marginBottom: '8px' }}>Dine Koblinger</Subtitle1>
                             {sidebarContent}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                                    <Button 
+                                        appearance="secondary"
+                                        onClick={() => {
+                                            const gIdx = Math.min(presentationGroupIdx, relationships.length - 1);
+                                            if (gIdx > 0) {
+                                                const newIdx = gIdx - 1;
+                                                setPresentationGroupIdx(newIdx);
+                                                setActiveRelId(relationships[newIdx].id);
+                                                setPresentationItemIdx(0);
+                                                setPresEdgePopup(null);
+                                            }
+                                        }}
+                                        disabled={presentationGroupIdx <= 0}
+                                    >
+                                        ▲ Forrige
+                                    </Button>
+                                    <Button 
+                                        appearance="secondary"
+                                        onClick={() => {
+                                            const gIdx = Math.min(presentationGroupIdx, relationships.length - 1);
+                                            if (gIdx < relationships.length - 1) {
+                                                const newIdx = gIdx + 1;
+                                                setPresentationGroupIdx(newIdx);
+                                                setActiveRelId(relationships[newIdx].id);
+                                                setPresentationItemIdx(0);
+                                                setPresEdgePopup(null);
+                                            }
+                                        }}
+                                        disabled={presentationGroupIdx >= relationships.length - 1}
+                                    >
+                                        ▼ Neste
+                                    </Button>
+                                </div>
+                                <Button 
+                                    appearance="primary" 
+                                    icon={<Add20Filled />}
+                                    onClick={addNewRelationship}
+                                    disabled={isSolving}
+                                >
+                                    Ny kobling
+                                </Button>
+                            </div>
                         </div>
 
                         </div>
