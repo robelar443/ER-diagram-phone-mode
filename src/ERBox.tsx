@@ -237,13 +237,12 @@ export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, container
                 left: isPresentationMode ? 'auto' : `${leftPx}px`, 
                 top: isPresentationMode ? 'auto' : `${topPx}px`,
                 position: isPresentationMode ? 'relative' : 'absolute',
-                transform: isPresentationMode ? 'none' : (isTeleportSelected ? 'translate(-50%, -50%) scale(1.05)' : 'translate(-50%, -50%)'),
+                transform: isPresentationMode ? 'none' : 'translate(-50%, -50%)',
                 pointerEvents: (isFollowing || isGhost) ? 'none' : 'auto', 
                 opacity: (isFollowing || isGhost) ? 0.8 : 1,
-                zIndex: isFollowing ? 100 : (isTeleportSelected ? 50 : 10),
+                zIndex: isFollowing ? 100 : 10,
                 borderColor: borderCol,
                 margin: isPresentationMode ? '0' : undefined,
-                boxShadow: isTeleportSelected ? '0 0 0 4px #0078d4, 0 8px 16px rgba(0,0,0,0.3)' : undefined,
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 cursor: onClick ? 'pointer' : undefined
             }}
