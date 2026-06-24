@@ -74,9 +74,11 @@ interface ERBoxProps {
     onToggleEntity: () => void;
     isPresentationMode?: boolean;
     isReadOnly?: boolean;
+    onClick?: () => void;
+    isTeleportSelected?: boolean;
 }
 
-export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, containerRef, entityOrders, onUpdateOrder, onUpdateEntity, onDeleteEntity, onToggleEntity, isPresentationMode, isReadOnly }) => {
+export const ERBox: React.FC<ERBoxProps> = ({ entity, connectedColors, containerRef, entityOrders, onUpdateOrder, onUpdateEntity, onDeleteEntity, onToggleEntity, isPresentationMode, isReadOnly, onClick, isTeleportSelected }) => {
     const classes = useStyles();
     const [isEditingName, setIsEditingName] = useState(false);
     const [editingOrderRelId, setEditingOrderRelId] = useState<number | null>(null);

@@ -110,6 +110,7 @@ export default function App() {
   const [presentationGroupIdx, setPresentationGroupIdx] = useState(0);
   const [presentationItemIdx, setPresentationItemIdx] = useState(0);
   const [presEdgePopup, setPresEdgePopup] = useState<{ relId: number, segmentIdx: number } | null>(null);
+  const [teleportEntityId, setTeleportEntityId] = useState<number | null>(null);
 
   useEffect(() => {
     let max_x = 80;
@@ -601,7 +602,14 @@ export default function App() {
                       isSolving={isSolving} 
                       gridW={gridDim.w}
                       gridH={gridDim.h}
-                      onGridClick={isReadOnly ? () => {} : handleGridClick} 
+                      onGridClick={isReadOnly ? (x, y) => {
+                          if (isPhoneMode && phoneViewType === 'overview' && teleportEntityId !== null) {
+                              const updatedEntities = entities.map(e => e.id === teleportEntityId ? { ...e, x, y } : e);
+                              setEntities(updatedEntities);
+                              setTeleportEntityId(null);
+                              startSolve(updatedEntities);
+                          }
+                      } : handleGridClick} 
                       onEdgeClick={isReadOnly ? () => {} : (relId, segmentIdx, x, y) => {
                           setEdgePopup({ relId, segmentIdx, x, y });
                           setActiveRelId(relId);
@@ -638,6 +646,12 @@ export default function App() {
                               containerRef={isReadOnly ? { current: null } as any : containerRef} 
                               entityOrders={entityOrders}
                               isReadOnly={isReadOnly}
+                              onClick={() => {
+                                  if (isPhoneMode && phoneViewType === 'overview') {
+                                      setTeleportEntityId(entity.id === teleportEntityId ? null : entity.id);
+                                  }
+                              }}
+                              isTeleportSelected={teleportEntityId === entity.id}
                               onUpdateOrder={isReadOnly ? () => {} : (relId, newOrder) => updateEntityOrder(relId, entity.id, newOrder)}
                               onUpdateEntity={isReadOnly ? () => {} : updateEntity} 
                               onDeleteEntity={isReadOnly ? () => {} : deleteEntity} 
