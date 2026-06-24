@@ -846,7 +846,7 @@ export default function App() {
 
                                     if (phoneViewType === 'overview') {
                                         return (
-                                            <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
+                                            <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0, minWidth: 0 }}>
                                                 <div style={{ flex: 1, overflow: 'auto' }}>
                                                     {renderDiagram(true, phoneZoom)}
                                                 </div>
