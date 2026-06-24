@@ -534,6 +534,58 @@ export default function App() {
     setIsSolving(false);
   };
 
+    const sidebarContent = (
+        <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {relationships.map(rel => {
+                const isAct = rel.id === activeRelId;
+                const colors = SNAKE_COLORS[rel.colorIdx];
+                return (
+                    <div 
+                        key={rel.id} 
+                        className={`${classes.relationshipCard} ${isAct ? classes.relationshipCardActive : ''}`}
+                        style={{ borderColor: isAct ? colors.main : 'transparent' }}
+                        onClick={() => {
+                            if (!isSolving) {
+                                setActiveRelId(rel.id);
+                                if (viewMode === 'presentation') {
+                                    const gIdx = relationships.findIndex(r => r.id === rel.id);
+                                    if (gIdx >= 0) {
+                                        setPresentationGroupIdx(gIdx);
+                                        setPresentationItemIdx(0);
+                                        setPresEdgePopup(null);
+                                    }
+                                }
+                            }
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '16px', height: '16px', borderRadius: '4px', backgroundColor: colors.main, boxShadow: `0 0 8px ${colors.glow}` }} />
+                                <div>
+                                    <Body1 style={{ fontWeight: 'bold' }}>
+                                        {rel.entityIds.length === 0 ? "Ny kobling" : 
+                                         rel.entityIds.map(eid => entities.find(e => e.id === eid)?.name).join(' - ')}
+                                    </Body1>
+                                    <div style={{ fontSize: '12px', color: tokens.colorNeutralForeground3 }}>
+                                        Kobler {rel.entityIds.length} bokser
+                                    </div>
+                                </div>
+                            </div>
+                            {viewMode !== 'presentation' && (
+                                <Button 
+                                    icon={<Delete20Regular />} 
+                                    appearance="transparent"
+                                    onClick={(e) => { e.stopPropagation(); removeRelationship(rel.id); }}
+                                    disabled={isSolving}
+                                />
+                            )}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+
   return (
     <div className={classes.container}>
         {/* Workspace (Left Panel) */}
@@ -746,7 +798,7 @@ export default function App() {
                             position: 'relative',
                             boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
                             display: 'flex',
-                            flexDirection: 'column',
+                            flexDirection: phoneOrientation === 'portrait' ? 'column' : 'row',
                             transform: `scale(${Math.min(1, (window.innerHeight - 80) / (phoneOrientation === 'portrait' ? 915 : 412))})`,
                             transformOrigin: 'center center',
                             color: tokens.colorNeutralForeground1,
@@ -1066,6 +1118,22 @@ export default function App() {
                                 return <div style={{ margin: 'auto', color: 'red' }}>Feil ved innlasting av presentasjon: {e?.message || 'Ukjent feil'}</div>;
                             }
                         })() : <div style={{ margin: 'auto' }}>Ingen koblinger å vise.</div>}
+
+                        {/* Presentation Mode Sidebar List */}
+                        <div style={{
+                            width: phoneOrientation === 'portrait' ? '100%' : '300px',
+                            height: phoneOrientation === 'portrait' ? '300px' : '100%',
+                            borderTop: phoneOrientation === 'portrait' ? `1px solid ${tokens.colorNeutralStroke1}` : 'none',
+                            borderLeft: phoneOrientation === 'portrait' ? 'none' : `1px solid ${tokens.colorNeutralStroke1}`,
+                            backgroundColor: tokens.colorNeutralBackground2,
+                            display: 'flex', flexDirection: 'column',
+                            padding: '12px',
+                            boxSizing: 'border-box'
+                        }}>
+                            <Subtitle1 style={{ marginBottom: '8px' }}>Dine Koblinger</Subtitle1>
+                            {sidebarContent}
+                        </div>
+
                         </div>
 
                         {/* Presentation Edge Popup */}
@@ -1146,43 +1214,7 @@ export default function App() {
         <div className={classes.sidebar}>
             <Subtitle1>Dine Koblinger</Subtitle1>
             
-            <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {relationships.map(rel => {
-                    const isAct = rel.id === activeRelId;
-                    const colors = SNAKE_COLORS[rel.colorIdx];
-                    return (
-                        <div 
-                            key={rel.id} 
-                            className={`${classes.relationshipCard} ${isAct ? classes.relationshipCardActive : ''}`}
-                            style={{ 
-                                borderColor: isAct ? colors.main : 'transparent',
-                            }}
-                            onClick={() => !isSolving && setActiveRelId(rel.id)}
-                        >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <div style={{ width: '16px', height: '16px', borderRadius: '4px', backgroundColor: colors.main, boxShadow: `0 0 8px ${colors.glow}` }} />
-                                    <div>
-                                        <Body1 style={{ fontWeight: 'bold' }}>
-                                            {rel.entityIds.length === 0 ? "Ny kobling" : 
-                                             rel.entityIds.map(eid => entities.find(e => e.id === eid)?.name).join(' - ')}
-                                        </Body1>
-                                        <div style={{ fontSize: '12px', color: tokens.colorNeutralForeground3 }}>
-                                            Kobler {rel.entityIds.length} bokser
-                                        </div>
-                                    </div>
-                                </div>
-                                <Button 
-                                    icon={<Delete20Regular />} 
-                                    appearance="transparent"
-                                    onClick={(e) => { e.stopPropagation(); removeRelationship(rel.id); }}
-                                    disabled={isSolving}
-                                />
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
+            {sidebarContent}
 
             <Divider />
 
