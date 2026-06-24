@@ -851,7 +851,7 @@ export default function App() {
                                                 <div style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
                                                     <Button 
                                                         appearance="primary" 
-                                                        onClick={(e) => startSolve()}
+                                                        onClick={() => startSolve()}
                                                         disabled={isSolving}
                                                         style={{ boxShadow: '0 4px 8px rgba(0,0,0,0.2)' }}
                                                     >
