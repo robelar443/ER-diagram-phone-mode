@@ -111,6 +111,7 @@ export default function App() {
   const [presentationItemIdx, setPresentationItemIdx] = useState(0);
   const [presEdgePopup, setPresEdgePopup] = useState<{ relId: number, segmentIdx: number } | null>(null);
   const [teleportEntityId, setTeleportEntityId] = useState<number | null>(null);
+  const [teleportMousePos, setTeleportMousePos] = useState<{x: number, y: number} | null>(null);
 
   useEffect(() => {
     let max_x = 80;
@@ -594,6 +595,15 @@ export default function App() {
                       position: 'absolute',
                       top: 0, left: 0
                   }}
+                  onMouseMove={(e) => {
+                      if (teleportEntityId !== null) {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const x = Math.round((e.clientX - rect.left) / currentZoom / 40);
+                          const y = Math.round((e.clientY - rect.top) / currentZoom / 40);
+                          setTeleportMousePos({ x, y });
+                      }
+                  }}
+                  onMouseLeave={() => setTeleportMousePos(null)}
               >
                   <CanvasGrid 
                       entities={entities} 
@@ -607,6 +617,7 @@ export default function App() {
                               const updatedEntities = entities.map(e => e.id === teleportEntityId ? { ...e, x, y } : e);
                               setEntities(updatedEntities);
                               setTeleportEntityId(null);
+                              setTeleportMousePos(null);
                               startSolve(updatedEntities);
                           }
                       } : handleGridClick} 
@@ -649,6 +660,7 @@ export default function App() {
                               onClick={() => {
                                   if (viewMode === 'presentation' && phoneViewType === 'overview') {
                                       setTeleportEntityId(entity.id === teleportEntityId ? null : entity.id);
+                                      setTeleportMousePos(null);
                                   }
                               }}
                               isTeleportSelected={teleportEntityId === entity.id}
@@ -659,6 +671,27 @@ export default function App() {
                           />
                       );
                   })}
+
+                  {/* Render ghost box for teleportation */}
+                  {teleportEntityId && teleportMousePos && (() => {
+                      const entity = entities.find(e => e.id === teleportEntityId);
+                      if (!entity) return null;
+                      return (
+                          <div style={{ pointerEvents: 'none', opacity: 0.5, position: 'absolute', inset: 0, zIndex: 2000 }}>
+                              <ERBox 
+                                  entity={{ ...entity, x: teleportMousePos.x, y: teleportMousePos.y }}
+                                  connectedColors={[]}
+                                  containerRef={{ current: null } as any}
+                                  entityOrders={[]}
+                                  isReadOnly={true}
+                                  onUpdateOrder={() => {}}
+                                  onUpdateEntity={() => {}}
+                                  onDeleteEntity={() => {}}
+                                  onToggleEntity={() => {}}
+                              />
+                          </div>
+                      );
+                  })()}
               </div>
           </div>
       );
