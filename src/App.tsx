@@ -677,13 +677,14 @@ export default function App() {
                       const entity = entities.find(e => e.id === teleportEntityId);
                       if (!entity) return null;
                       return (
-                          <div style={{ pointerEvents: 'none', opacity: 0.5, position: 'absolute', inset: 0, zIndex: 2000 }}>
+                          <div style={{ position: 'absolute', inset: 0, zIndex: 2000 }}>
                               <ERBox 
                                   entity={{ ...entity, x: teleportMousePos.x, y: teleportMousePos.y }}
                                   connectedColors={[]}
                                   containerRef={{ current: null } as any}
                                   entityOrders={[]}
                                   isReadOnly={true}
+                                  isGhost={true}
                                   onUpdateOrder={() => {}}
                                   onUpdateEntity={() => {}}
                                   onDeleteEntity={() => {}}
