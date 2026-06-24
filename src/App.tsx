@@ -603,7 +603,7 @@ export default function App() {
                       gridW={gridDim.w}
                       gridH={gridDim.h}
                       onGridClick={isReadOnly ? (x, y) => {
-                          if (isPhoneMode && phoneViewType === 'overview' && teleportEntityId !== null) {
+                          if (viewMode === 'presentation' && phoneViewType === 'overview' && teleportEntityId !== null) {
                               const updatedEntities = entities.map(e => e.id === teleportEntityId ? { ...e, x, y } : e);
                               setEntities(updatedEntities);
                               setTeleportEntityId(null);
@@ -647,7 +647,7 @@ export default function App() {
                               entityOrders={entityOrders}
                               isReadOnly={isReadOnly}
                               onClick={() => {
-                                  if (isPhoneMode && phoneViewType === 'overview') {
+                                  if (viewMode === 'presentation' && phoneViewType === 'overview') {
                                       setTeleportEntityId(entity.id === teleportEntityId ? null : entity.id);
                                   }
                               }}
