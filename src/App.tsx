@@ -838,7 +838,6 @@ export default function App() {
                                     return (
                                         <div 
                                             onPointerDown={(e) => {
-                                                (e.currentTarget as any).setPointerCapture(e.pointerId);
                                                 (e.currentTarget as any).dataset.startY = e.clientY.toString();
                                                 (e.currentTarget as any).dataset.startX = e.clientX.toString();
                                             }}
