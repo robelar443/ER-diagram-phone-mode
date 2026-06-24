@@ -854,33 +854,17 @@ export default function App() {
                                                 <div style={{ 
                                                     position: 'absolute', 
                                                     bottom: 10, 
-                                                    left: 10, 
                                                     right: 10, 
                                                     display: 'flex', 
-                                                    justifyContent: 'space-between', 
+                                                    justifyContent: 'flex-end', 
                                                     alignItems: 'center',
                                                     zIndex: 1000,
                                                     pointerEvents: 'none'
                                                 }}>
-                                                    <div style={{ flex: 1 }} /> {/* spacer left */}
-                                                    
-                                                    <div style={{ pointerEvents: 'auto' }}>
-                                                        <Button 
-                                                            appearance="primary" 
-                                                            onClick={() => startSolve()}
-                                                            disabled={isSolving}
-                                                            style={{ boxShadow: '0 4px 8px rgba(0,0,0,0.2)' }}
-                                                        >
-                                                            {isSolving ? 'Beregner...' : 'Beregn alle ruter'}
-                                                        </Button>
-                                                    </div>
-                                                    
-                                                    <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', pointerEvents: 'auto' }}>
-                                                        <div style={{ display: 'flex', gap: 4, background: 'rgba(255,255,255,0.8)', padding: 4, borderRadius: 8, boxShadow: '0 0 10px rgba(0,0,0,0.1)' }}>
-                                                            <Button icon={<ZoomOut20Regular />} onClick={() => setPhoneZoom(z => Math.max(0.1, z - 0.1))} size="small" />
-                                                            <span style={{ alignSelf: 'center', fontWeight: 'bold', fontSize: '12px' }}>{Math.round(phoneZoom * 100)}%</span>
-                                                            <Button icon={<ZoomIn20Regular />} onClick={() => setPhoneZoom(z => Math.min(1.5, z + 0.1))} size="small" />
-                                                        </div>
+                                                    <div style={{ pointerEvents: 'auto', display: 'flex', gap: 4, background: 'rgba(255,255,255,0.8)', padding: 4, borderRadius: 8, boxShadow: '0 0 10px rgba(0,0,0,0.1)' }}>
+                                                        <Button icon={<ZoomOut20Regular />} onClick={() => setPhoneZoom(z => Math.max(0.1, z - 0.1))} size="small" />
+                                                        <span style={{ alignSelf: 'center', fontWeight: 'bold', fontSize: '12px' }}>{Math.round(phoneZoom * 100)}%</span>
+                                                        <Button icon={<ZoomIn20Regular />} onClick={() => setPhoneZoom(z => Math.min(1.5, z + 0.1))} size="small" />
                                                     </div>
                                                 </div>
                                             </div>
@@ -1177,13 +1161,25 @@ export default function App() {
                                 >
                                     Ny kobling
                                 </Button>
-                                <Button 
-                                    appearance="secondary"
-                                    onClick={() => setPhoneViewType(t => t === 'pair' ? 'overview' : 'pair')}
-                                    style={{ marginTop: '8px' }}
-                                >
-                                    {phoneViewType === 'pair' ? 'Vis Helhet' : 'Vis Par'}
-                                </Button>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                                    <Button 
+                                        appearance="secondary"
+                                        onClick={() => setPhoneViewType(t => t === 'pair' ? 'overview' : 'pair')}
+                                        style={{ width: '100%' }}
+                                    >
+                                        {phoneViewType === 'pair' ? 'Vis Helhet' : 'Vis Par'}
+                                    </Button>
+                                    {phoneViewType === 'overview' && (
+                                        <Button 
+                                            appearance="primary" 
+                                            onClick={() => startSolve()}
+                                            disabled={isSolving}
+                                            style={{ width: '100%' }}
+                                        >
+                                            {isSolving ? 'Beregner...' : 'Beregn alle ruter'}
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
