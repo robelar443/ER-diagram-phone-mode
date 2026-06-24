@@ -547,14 +547,6 @@ export default function App() {
                         onClick={() => {
                             if (!isSolving) {
                                 setActiveRelId(rel.id);
-                                if (viewMode === 'presentation') {
-                                    const gIdx = relationships.findIndex(r => r.id === rel.id);
-                                    if (gIdx >= 0) {
-                                        setPresentationGroupIdx(gIdx);
-                                        setPresentationItemIdx(0);
-                                        setPresEdgePopup(null);
-                                    }
-                                }
                             }
                         }}
                     >
@@ -1099,7 +1091,6 @@ export default function App() {
                                             if (gIdx > 0) {
                                                 const newIdx = gIdx - 1;
                                                 setPresentationGroupIdx(newIdx);
-                                                setActiveRelId(relationships[newIdx].id);
                                                 setPresentationItemIdx(0);
                                                 setPresEdgePopup(null);
                                             }
@@ -1115,7 +1106,6 @@ export default function App() {
                                             if (gIdx < relationships.length - 1) {
                                                 const newIdx = gIdx + 1;
                                                 setPresentationGroupIdx(newIdx);
-                                                setActiveRelId(relationships[newIdx].id);
                                                 setPresentationItemIdx(0);
                                                 setPresEdgePopup(null);
                                             }
