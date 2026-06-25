@@ -646,11 +646,9 @@ export default function App() {
                               containerRef={isReadOnly ? { current: null } as any : containerRef} 
                               entityOrders={entityOrders}
                               isReadOnly={isReadOnly}
-                              onClick={() => {
-                                  if (viewMode === 'presentation' && phoneViewType === 'overview') {
-                                      setTeleportEntityId(entity.id === teleportEntityId ? null : entity.id);
-                                  }
-                              }}
+                              onClick={viewMode === 'presentation' && phoneViewType === 'overview' ? () => {
+                                  setTeleportEntityId(entity.id === teleportEntityId ? null : entity.id);
+                              } : undefined}
                               onUpdateOrder={isReadOnly ? () => {} : (relId, newOrder) => updateEntityOrder(relId, entity.id, newOrder)}
                               onUpdateEntity={isReadOnly ? () => {} : updateEntity} 
                               onDeleteEntity={isReadOnly ? () => {} : deleteEntity} 
