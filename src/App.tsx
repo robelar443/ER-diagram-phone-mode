@@ -6,9 +6,18 @@ import {
   Subtitle1,
   Body1,
   Divider,
-  Select
+  Select,
+  Dialog,
+  DialogTrigger,
+  DialogSurface,
+  DialogTitle,
+  DialogBody,
+  DialogActions,
+  DialogContent,
+  Textarea
 } from '@fluentui/react-components';
-import { Play20Filled, ArrowReset20Filled, Add20Filled, Delete20Regular, ZoomIn20Regular, ZoomOut20Regular, Dismiss16Regular, Save20Regular, FolderOpen20Regular } from '@fluentui/react-icons';
+import { Play20Filled, ArrowReset20Filled, Add20Filled, Delete20Regular, ZoomIn20Regular, ZoomOut20Regular, Dismiss16Regular, Save20Regular, FolderOpen20Regular, Code20Regular } from '@fluentui/react-icons';
+import { parseMermaidERDiagram } from './mermaidParser';
 import type { EREntity, ERRelationship } from './types';
 import { attemptSolve, W, H, updateGridDimensions } from './router';
 import type { ObstacleBox } from './router';
@@ -101,6 +110,8 @@ export default function App() {
   const [zoom, setZoom] = useState(1);
   const [gridDim, setGridDim] = useState({ w: 80, h: 60 });
   const [edgePopup, setEdgePopup] = useState<{ relId: number, segmentIdx: number, x: number, y: number } | null>(null);
+  const [isMermaidOpen, setIsMermaidOpen] = useState(false);
+  const [mermaidCode, setMermaidCode] = useState('');
   const recalcTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [viewMode, setViewMode] = useState<'edit' | 'presentation'>('edit');
@@ -682,6 +693,9 @@ export default function App() {
                     </Button>
                     <Button icon={<Save20Regular />} onClick={handleSave}>
                         Lagre
+                    </Button>
+                    <Button icon={<Code20Regular />} onClick={() => setIsMermaidOpen(true)}>
+                        Importer Mermaid
                     </Button>
                     <Button 
                         appearance={viewMode === 'presentation' ? 'primary' : 'outline'}
@@ -1319,6 +1333,45 @@ export default function App() {
                 </Button>
             </div>
         </div>
+
+        <Dialog open={isMermaidOpen} onOpenChange={(_e, data) => setIsMermaidOpen(data.open)}>
+            <DialogSurface>
+                <DialogBody>
+                    <DialogTitle>Importer Mermaid ER-diagram</DialogTitle>
+                    <DialogContent style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <Body1>Lim inn Mermaid-koden her (bokser legges til diagrammet):</Body1>
+                        <Textarea 
+                            value={mermaidCode} 
+                            onChange={(_e, d) => setMermaidCode(d.value)} 
+                            style={{ height: '300px' }}
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <DialogTrigger disableButtonEnhancement>
+                            <Button appearance="secondary">Avbryt</Button>
+                        </DialogTrigger>
+                        <Button appearance="primary" onClick={() => {
+                            const startEntityId = entities.length > 0 ? Math.max(...entities.map(e => e.id)) + 1 : 1;
+                            const startRelId = relationships.length > 0 ? Math.max(...relationships.map(r => r.id)) + 1 : 1;
+                            const startColorIdx = startRelId % SNAKE_COLORS.length;
+                            
+                            const parsed = parseMermaidERDiagram(mermaidCode, startEntityId, startRelId, startColorIdx);
+                            
+                            const newEntities = [...entities, ...parsed.newEntities];
+                            setEntities(newEntities);
+                            
+                            if (parsed.newRelationships.length > 0) {
+                                const newRels = [...relationships, ...parsed.newRelationships];
+                                setRelationships(newRels);
+                            }
+                            
+                            setIsMermaidOpen(false);
+                            setMermaidCode('');
+                        }}>Importer</Button>
+                    </DialogActions>
+                </DialogBody>
+            </DialogSurface>
+        </Dialog>
     </div>
   );
 }
